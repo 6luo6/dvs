@@ -1,6 +1,7 @@
 package io.dataease.chart.manage;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dataease.extensions.datasource.dto.DatasetTableFieldDTO;
@@ -71,7 +72,13 @@ public class ChartViewManege {
         if (ObjectUtils.isEmpty(coreChartView)) {
             coreChartViewMapper.insert(record);
         } else {
-            coreChartViewMapper.updateById(record);
+            UpdateWrapper<CoreChartView> updateWrapper = new UpdateWrapper<>();
+            updateWrapper.eq("id", record.getId());
+            //富文本允许设置空的tableId 这里额外更新一下
+            if(record.getTableId() == null){
+                updateWrapper.set("table_id", null);
+            }
+            coreChartViewMapper.update(record,updateWrapper);
         }
         return chartViewDTO;
     }
@@ -159,10 +166,12 @@ public class ChartViewManege {
 
         for (ChartViewFieldDTO ele : list) {
             if (Objects.equals(ele.getExtField(), ExtFieldConstant.EXT_CALC)) {
-                String originField = Utils.calcFieldRegex(ele.getOriginName(), tableObj, list.stream().peek(e -> {
+                List<DatasetTableFieldDTO> f = list.stream().map(e -> {
                     DatasetTableFieldDTO dto = new DatasetTableFieldDTO();
                     BeanUtils.copyBean(dto, e);
-                }).collect(Collectors.toList()), true, null);
+                    return dto;
+                }).collect(Collectors.toList());
+                String originField = Utils.calcFieldRegex(ele.getOriginName(), tableObj, f, true, null, Utils.mergeParam(Utils.getParams(f), null));
                 for (String func : FunctionConstant.AGG_FUNC) {
                     if (Utils.matchFunction(func, originField)) {
                         ele.setSummary("");
@@ -327,10 +336,10 @@ public class ChartViewManege {
     public List<ViewSelectorVO> viewOption(Long resourceId) {
         List<ViewSelectorVO> result = extChartViewMapper.queryViewOption(resourceId);
         DataVisualizationInfo dvInfo = visualizationInfoMapper.selectById(resourceId);
-        if(dvInfo != null && !CollectionUtils.isEmpty(result)){
+        if (dvInfo != null && !CollectionUtils.isEmpty(result)) {
             String componentData = dvInfo.getComponentData();
-            return result.stream().filter(item ->componentData.indexOf(String.valueOf(item.getId()))>0).toList();
-        }else{
+            return result.stream().filter(item -> componentData.indexOf(String.valueOf(item.getId())) > 0).toList();
+        } else {
             return result;
         }
     }
