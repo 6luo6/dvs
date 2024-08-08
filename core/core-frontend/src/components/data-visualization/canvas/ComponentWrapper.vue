@@ -9,11 +9,18 @@ import ComponentSelector from '@/components/visualization/ComponentSelector.vue'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import Board from '@/components/de-board/Board.vue'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
+import { useModal } from '@/utils/canvasUtils'
 
 const componentWrapperInnerRef = ref(null)
 const componentEditBarRef = ref(null)
 const dvMainStore = dvMainStoreWithOut()
-
+//弹框
+const { isShowModal, modalUrl, modalSetting, jumpLink } = useModal()
+function jumpClick(elementInfo) {
+  if (!elementInfo.jumpActive) return
+  modalSetting.value = elementInfo.modalSetting
+  jumpLink(elementInfo.linkJumpInfo)
+}
 const props = defineProps({
   active: {
     type: Boolean,
@@ -131,11 +138,15 @@ const onClick = e => {
   dvMainStore.setCurComponent({ component: config.value, index: index.value })
 }
 
-const getComponentStyleDefault = style => {
+const getComponentStyleDefault = item => {
   if (config.value.component.includes('Svg')) {
-    return getStyle(style, ['top', 'left', 'width', 'height', 'rotate', 'backgroundColor'])
+    return getStyle(item.style, ['top', 'left', 'width', 'height', 'rotate', 'backgroundColor'])
   } else {
-    return getStyle(style, ['top', 'left', 'width', 'height', 'rotate'])
+    if (item.activeChange && item.activeChange.isActive) {
+      return getStyle(item.activeChange.style, ['top', 'left', 'width', 'height', 'rotate'])
+    } else {
+      return getStyle(item.style, ['top', 'left', 'width', 'height', 'rotate'])
+    }
   }
 }
 
@@ -153,7 +164,9 @@ const componentBackgroundStyle = computed(() => {
       outerImage,
       innerPadding,
       borderRadius
-    } = config.value.commonBackground
+    } = config.value.activeChange?.isActive
+      ? config.value.activeChange.background
+      : config.value.commonBackground
     const style = {
       padding: innerPadding * deepScale.value + 'px',
       borderRadius: borderRadius + 'px'
@@ -192,47 +205,13 @@ const commonBackgroundSvgInner = computed(() => {
   }
 })
 
-const slotStyle = computed(() => {
-  // 3d效果支持
-  if (config.value['multiDimensional'] && config.value['multiDimensional']?.enable) {
-    return {
-      transform: `rotateX(${config.value['multiDimensional'].x}deg) rotateY(${config.value['multiDimensional'].y}deg) rotateZ(${config.value['multiDimensional'].z}deg)`
-    }
-  } else {
-    return {}
-  }
-})
-
 const onPointClick = param => {
   emits('onPointClick', param)
 }
 
-const eventEnable = computed(
-  () =>
-    (['Picture', 'CanvasIcon', 'CircleShape', 'SvgTriangle', 'RectShape', 'ScrollText'].includes(
-      config.value.component
-    ) ||
-      config.value.innerType === 'rich-text') &&
-    config.value.events &&
-    config.value.events.checked
-)
-
-const onWrapperClick = e => {
-  if (eventEnable.value) {
-    if (config.value.events.type === 'showHidden') {
-      // 打开弹框区域
-      nextTick(() => {
-        dvMainStore.popAreaActiveSwitch()
-      })
-    } else if (config.value.events.type === 'jump') {
-      window.open(config.value.events.jump.value, '_blank')
-    } else if (config.value.events.type === 'refreshDataV') {
-      useEmitt().emitter.emit('componentRefresh')
-    }
-    e.preventDefault()
-    e.stopPropagation()
-  }
-}
+const innerOutActive = computed(() => {
+  return config.value.category === 'hidden' && showPosition.value === 'popEdit'
+})
 
 const deepScale = computed(() => scale.value / 100)
 </script>
@@ -241,6 +220,7 @@ const deepScale = computed(() => scale.value / 100)
   <div
     class="wrapper-outer"
     :class="showPosition + '-' + config.component"
+    @click="onClick"
     @mousedown="handleInnerMouseDown"
     @mouseenter="onMouseEnter"
   >
@@ -270,12 +250,7 @@ const deepScale = computed(() => scale.value / 100)
         :style="{ color: config.commonBackground.innerImageColor }"
         :name="commonBackgroundSvgInner"
       ></Board>
-      <div
-        class="wrapper-inner-adaptor"
-        :style="slotStyle"
-        :class="{ 'pop-wrapper-inner': popActive, 'event-active': eventEnable }"
-        @mousedown="onWrapperClick"
-      >
+      <div class="wrapper-inner-adaptor" :class="{ 'pop-wrapper-inner': popActive }">
         <component
           :is="findComponent(config['component'])"
           :view="viewInfo"
@@ -285,7 +260,7 @@ const deepScale = computed(() => scale.value / 100)
           :dv-info="dvInfo"
           :dv-type="dvInfo.type"
           :canvas-view-info="canvasViewInfo"
-          :style="getComponentStyleDefault(config?.style)"
+          :style="getComponentStyleDefault(config)"
           :prop-value="config?.propValue"
           :element="config"
           :request="config?.request"
@@ -296,9 +271,65 @@ const deepScale = computed(() => scale.value / 100)
           :disabled="true"
           :is-edit="false"
           @onPointClick="onPointClick"
+          @jumpClick="jumpClick"
         />
       </div>
     </div>
+    <Teleport to="#preview-canvas-main" v-if="isShowModal">
+      <el-dialog
+        v-model="isShowModal"
+        :show-close="false"
+        :width="modalSetting.maxWidth || modalSetting.width"
+        class="modal_iframe_box"
+        :style="{
+          '--modal_iframe_body_padding': modalSetting.bodyPadding + 'px',
+          '--modal_iframe_body_max_height': modalSetting.maxHeight,
+          '--modal_iframe_body_height': modalSetting.height,
+          '--modal_iframe_body_bg_color': modalSetting.bodyBgColor,
+          'background-color': modalSetting.titleBgColor
+        }"
+      >
+        <template #header="{ close, titleId, titleClass }">
+          <div class="my-header" style="color: #646a73">
+            <h4
+              v-if="modalSetting.isShowTitle"
+              :id="titleId"
+              :class="titleClass"
+              :style="{
+                color: modalSetting.titleColor,
+                fontSize: modalSetting.titleFontSize + 'px',
+                textAlign: modalSetting.titleHPosition,
+                fontWeight: modalSetting.titleIsBolder ? 'bold' : '',
+                fontStyle: modalSetting.titleIsItalic ? 'italic' : '',
+                letterSpacing: modalSetting.titleLetterSpace + 'px',
+                padding: modalSetting.titleVPadding + 'px ' + modalSetting.titleHPadding + 'px'
+              }"
+            >
+              {{ modalSetting.title }}
+            </h4>
+            <el-icon
+              v-if="modalSetting.showCloseIcon"
+              :style="{
+                position: 'absolute',
+                cursor: 'pointer',
+                top: modalSetting.iconTop + 'px',
+                right: modalSetting.iconRight + 'px'
+              }"
+              :size="modalSetting.iconSize"
+              :color="modalSetting.iconColor"
+              @click="close"
+              ><component :is="modalSetting.closeIcon"
+            /></el-icon>
+          </div>
+        </template>
+        <div style="width: 100%; height: 100%; overflow: scroll; font-size: 0">
+          <iframe
+            :src="modalUrl"
+            :style="{ width: modalSetting.width, height: modalSetting.height, border: 'none' }"
+          ></iframe>
+        </div>
+      </el-dialog>
+    </Teleport>
   </div>
 </template>
 
@@ -317,7 +348,6 @@ const deepScale = computed(() => scale.value / 100)
   background-size: 100% 100% !important;
   .wrapper-inner-adaptor {
     position: relative;
-    transform-style: preserve-3d;
     width: 100%;
     height: 100%;
   }
@@ -354,8 +384,5 @@ const deepScale = computed(() => scale.value / 100)
   z-index: 0;
   width: 100% !important;
   height: 100% !important;
-}
-.event-active {
-  cursor: pointer;
 }
 </style>

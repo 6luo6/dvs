@@ -10,6 +10,9 @@ import elementResizeDetectorMaker from 'element-resize-detector'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
 import CommonStyleSet from '@/custom-component/common/CommonStyleSet.vue'
 import CommonEvent from '@/custom-component/common/CommonEvent.vue'
+import CommonLinkJumpSet from '@/components/visualization/CommonLinkJumpSet.vue'
+import { ElIcon, ElMessage } from 'element-plus-secondary'
+import { canvasSave } from '@/utils/canvasUtils'
 const snapshotStore = snapshotStoreWithOut()
 
 const { t } = useI18n()
@@ -34,8 +37,9 @@ const props = withDefaults(
 
 const { themes, element, showStyle } = toRefs(props)
 const dvMainStore = dvMainStoreWithOut()
-const { dvInfo, batchOptStatus } = storeToRefs(dvMainStore)
+const { dvInfo, batchOptStatus, componentData } = storeToRefs(dvMainStore)
 const activeName = ref(element.value.collapseName)
+const linkJumpRef = ref(null)
 
 const styleKeys = computed(() => {
   if (element.value) {
@@ -65,6 +69,10 @@ const dashboardActive = computed(() => {
 const onBackgroundChange = val => {
   element.value.commonBackground = val
   emits('onAttrChange', { custom: 'commonBackground' })
+}
+
+const obActiveChangeBackground = val => {
+  element.value.activeChange.background = val
 }
 
 const onStyleAttrChange = ({ key, value }) => {
@@ -126,6 +134,29 @@ const stopEvent = e => {
     e.preventDefault()
   }
 }
+
+const linkJumpSetOpen = () => {
+  if (!dvInfo.value.id) {
+    ElMessage.warning('请先保存当前页面')
+    return
+  }
+  //跳转设置需要先触发保存
+  // canvasSave(() => {
+  linkJumpRef.value.dialogInit(element)
+  // })
+}
+
+const linkJumpActiveChange = () => {
+  snapshotStore.recordSnapshotCache()
+}
+//关联图表下拉
+const bindComponentList= computed(()=>{
+  return componentData.value.filter(x=>x.id !=element.value.id)
+})
+// 关联图表下拉是否禁用
+const isDisabled = id => {
+  return bindComponentList.value.find(x => x.activeChange?.chartId == id) ? true : false
+}
 </script>
 
 <template>
@@ -173,7 +204,92 @@ const stopEvent = e => {
       >
         <common-event :themes="themes" :events-info="element.events"></common-event>
       </el-collapse-item>
+<el-collapse-item
+        :effect="themes"
+        title="选中切换"
+        name="activeChange"
+        v-model="element.activeChange"
+        v-if="element.activeChange"
+      >
+        <div class="inner-container">
+          <el-form-item label="是否默认选中" v-if="element.activeChange.isActive !==undefined">
+            <el-radio-group :themes="themes" v-model="element.activeChange.isActive">
+              <el-radio :label="true">是</el-radio>
+              <el-radio :label="false">否</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="切换分组标识" v-if="element.activeChange.name !==undefined">
+            <el-input
+              :effect="themes"
+              v-model="element.activeChange.name"
+              size="small"
+              placeholder="请输入分组标识"
+            />
+          </el-form-item>
+          <el-form-item label="背景" v-if="backgroundCustomShow && element.activeChange.background !==undefined">
+            <background-overall-common
+              :themes="themes"
+              :common-background-pop="element.activeChange.background"
+              component-position="component"
+              @onBackgroundChange="obActiveChangeBackground"
+              :background-color-picker-width="backgroundColorPickerWidth"
+              :background-border-select-width="backgroundBorderSelectWidth"
+            />
+          </el-form-item>
+          <el-form-item label="样式" v-if="element.activeChange.style !==undefined">
+            <common-style-set :themes="themes" :element="element.activeChange"></common-style-set>
+          </el-form-item>
+          <el-form-item label="关联图表" v-if="element.activeChange.chartId !==undefined">
+            <el-select
+              size="default"
+              :effect="themes"
+              v-model="element.activeChange.chartId"
+              clearable
+            >
+              <el-option
+                v-for="option in bindComponentList"
+                :key="option.id"
+                :label="option.name"
+                :value="option.id"
+                :disabled="isDisabled(option.id)"
+              ></el-option>
+            </el-select>
+          </el-form-item>
+        </div>
+      </el-collapse-item>
+      <collapse-switch-item
+        :effect="themes"
+        title="跳转设置"
+        name="jumpSet"
+        v-model="element.jumpActive"
+        v-if="element.jumpActive !==undefined "
+        @modelChange="linkJumpActiveChange"
+      >
+        <div class="inner-container">
+          <span class="label" :class="'label-' + props.themes">跳转设置</span>
+          <span class="right-btns">
+            <el-button
+              class="circle-button font14"
+              :title="t('chart.edit')"
+              :class="'label-' + props.themes"
+              text
+              size="small"
+              :style="{ width: '24px', marginLeft: '6px' }"
+              @click="linkJumpSetOpen"
+            >
+              <template #icon>
+                <el-icon size="14px">
+                  <Icon name="icon_edit_outlined" />
+                </el-icon>
+              </template>
+            </el-button>
+          </span>
+        </div>
+      </collapse-switch-item>
     </el-collapse>
+<!--跳转设置-->
+    <CommonLinkJumpSet ref="linkJumpRef" />
+
   </div>
 </template>
 

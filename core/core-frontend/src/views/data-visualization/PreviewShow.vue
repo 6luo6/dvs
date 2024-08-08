@@ -208,6 +208,15 @@ onBeforeMount(() => {
     state.userLoginInfo = res.data
   })
 })
+const getStyle = computed(() => {
+  console.log({
+    width: state.canvasStylePreview.width < 1000 ? state.canvasStylePreview.width + 'px' : '100%'
+  })
+  return {
+    width: state.canvasStylePreview.width < 1000 ? state.canvasStylePreview.width + 'px' : '100%',
+    margin: '0 auto'
+  }
+})
 </script>
 
 <template>
@@ -278,6 +287,7 @@ onBeforeMount(() => {
             :dv-info="state.dvInfo"
             :cur-preview-gap="state.curPreviewGap"
             :download-status="downloadStatus"
+	    :style="getStyle"
           ></dv-preview>
         </div>
       </template>

@@ -10,7 +10,7 @@ const canEdit = ref(false)
 const ctrlKey = ref(17)
 const isCtrlDown = ref(false)
 
-const emit = defineEmits(['input'])
+const emit = defineEmits(['input', 'jumpClick'])
 const text = ref(null)
 
 const props = defineProps({
@@ -32,7 +32,7 @@ const props = defineProps({
 
 const { element } = toRefs(props)
 const dvMainStore = dvMainStoreWithOut()
-const { editMode, curComponent } = storeToRefs(dvMainStore)
+const { editMode, curComponent, componentData } = storeToRefs(dvMainStore)
 
 const onComponentClick = () => {
   if (curComponent.value.id !== element.value.id) {
@@ -112,10 +112,41 @@ const selectText = element => {
 onBeforeUnmount(() => {
   eventBus.off('componentClick', onComponentClick)
 })
+
+function jumpClick() {
+  if (element.value.activeChange?.chartId) {
+    let count = 0
+    componentData.value.forEach(item => {
+      if (
+        item != element.value &&
+        item.activeChange &&
+        item.activeChange.name == element.value.activeChange.name
+      ) {
+        item.activeChange.isActive = false
+        count++
+      }
+    })
+    if (count) {
+      element.value.activeChange.isActive = true
+    }
+    //只有一个情况下，反转自身
+    else {
+      element.value.activeChange.isActive = !element.value.activeChange.isActive
+    }
+  }
+  emit('jumpClick', element.value)
+}
 </script>
 
 <template>
-  <div v-if="editMode == 'edit'" class="v-text" @keydown="handleKeydown" @keyup="handleKeyup">
+  <div
+    v-if="editMode == 'edit'"
+    class="v-text"
+    :class="{ jump_hover: element.jumpActive || element.activeChange?.chartId }"
+    @keydown="handleKeydown"
+    @keyup="handleKeyup"
+    @click="jumpClick"
+  >
     <div
       ref="text"
       :contenteditable="canEdit"
@@ -130,7 +161,12 @@ onBeforeUnmount(() => {
       v-html="element['propValue']"
     ></div>
   </div>
-  <div v-else class="v-text preview">
+  <div
+    v-else
+    class="v-text preview"
+    @click="jumpClick"
+    :class="{ jump_hover: element.jumpActive || element.activeChange?.chartId }"
+  >
     <div
       :style="{ verticalAlign: element['style'].verticalAlign }"
       v-html="element['propValue']"
@@ -160,5 +196,8 @@ onBeforeUnmount(() => {
 
 .preview {
   user-select: none;
+}
+.jump_hover {
+  cursor: pointer;
 }
 </style>

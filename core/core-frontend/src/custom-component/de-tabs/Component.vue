@@ -279,16 +279,19 @@ const componentMoveIn = component => {
       component.canvasId = element.value.id + '--' + tabItem.name
       const refInstance = currentInstance.refs['tabCanvas_' + index][0]
       if (refInstance) {
+      //数据大屏取消矩阵变换
+      if (dvInfo.value.type !== 'dataV') {
         const matrixBase = refInstance.getBaseMatrixSize() //矩阵基础大小
         canvasChangeAdaptor(component, matrixBase)
-        tabItem.componentData.push(component)
-        nextTick(() => {
-          component.x = 1
-          component.y = 1
-          component.style.left = 0
-          component.style.top = 0
-          refInstance.addItemBox(component) //在适当的时候初始化布局组件
-        })
+      }
+      tabItem.componentData.push(component)
+      nextTick(() => {
+        component.x = 1
+        component.y = 1
+        component.style.left = 0
+        component.style.top = 0
+        refInstance.addItemBox(component) //在适当的时候初始化布局组件
+      })
       }
     }
   })
@@ -297,7 +300,16 @@ const componentMoveIn = component => {
 }
 
 const componentMoveOut = component => {
-  canvasChangeAdaptor(component, bashMatrixInfo.value, true)
+  //数据大屏取消矩阵变换
+  if (dvInfo.value.type !== 'dataV') {
+    canvasChangeAdaptor(component, bashMatrixInfo.value, true)
+  } else {
+    const targetDomComponent = document.querySelector('#point-shadow-main')
+    const componentLeft = targetDomComponent['offsetLeft']
+    const componentTop = targetDomComponent['offsetTop']
+    component.style.left = componentLeft
+    component.style.top = componentTop
+  }
   // 从Tab画布中移除
   eventBus.emit('removeMatrixItemById-' + component.canvasId, component.id)
   dvMainStore.setCurComponent({ component: null, index: null })

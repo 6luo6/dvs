@@ -320,7 +320,7 @@ const fullScreenPreview = () => {
           >
             <query-group :dv-model="dvModel"></query-group>
           </component-group>
-          <component-group is-label :base-width="215" icon-name="dv-text" title="文本">
+          <component-group is-label :base-width="315" icon-name="dv-text" title="文本">
             <text-group></text-group>
           </component-group>
           <component-group
@@ -331,6 +331,9 @@ const fullScreenPreview = () => {
             title="媒体"
           >
             <media-group></media-group>
+          </component-group>
+          <component-group is-label :base-width="115" icon-name="dv-tab" title="Tab">
+            <tabs-group></tabs-group>
           </component-group>
           <component-group is-label :base-width="215" icon-name="dv-more-com" title="更多">
             <more-com-group></more-com-group>

@@ -45,6 +45,14 @@ const newComponent = (componentName, innerType) => {
 <template>
   <div class="group" @dragstart="handleDragStart" @dragend="handleDragEnd">
     <drag-component
+          :themes="themes"
+          icon="dv-richText"
+          label="文本"
+          drag-info="VText&text"
+	  v-on:click="newComponent('VText', 'VText')"
+        ></drag-component>
+	
+    <drag-component
       :themes="themes"
       icon="dv-richText"
       label="富文本"

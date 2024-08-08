@@ -22,7 +22,7 @@ const { start, done } = useNProgress()
 
 const { loadStart, loadDone } = usePageLoading()
 
-const whiteList = ['/login', '/de-link', '/chart-view', '/notSupport', '/admin-login', '/401'] // 不重定向白名单
+const whiteList = ['/login', '/de-link', '/chart-view', '/notSupport', '/thirdLogin'] // 不重定向白名单
 const embeddedWindowWhiteList = ['/dvCanvas', '/dashboard', '/preview', '/dataset-embedded-form']
 const embeddedRouteWhiteList = ['/dataset-embedded', '/dataset-form', '/dataset-embedded-form']
 router.beforeEach(async (to, from, next) => {
@@ -34,19 +34,20 @@ router.beforeEach(async (to, from, next) => {
     await appStore.setAppModel()
     isDesktop = appStore.getDesktop
   }
-  if (isMobile() && !['/notSupport', '/chart-view'].includes(to.path)) {
+  if (isMobile() && to.path !== '/notSupport') {
     done()
     loadDone()
     if (to.name === 'link') {
-      window.location.href = window.origin + '/mobile.html#' + to.path
+      window.location.href = window.origin+location.pathname + '/mobile.html#' + to.path
     } else if (to.path === '/dvCanvas') {
-      next('/notSupport')
+      //next('/notSupport')
+      window.location.href = window.origin+location.pathname + 'mobile.html#' + to.path
     } else if (
       wsCache.get('user.token') ||
       isDesktop ||
       (!isPlatformClient() && !isLarkPlatform())
     ) {
-      window.location.href = window.origin + '/mobile.html#/index'
+      window.location.href = window.origin+location.pathname + '/mobile.html#/index'
     }
   }
   await appearanceStore.setAppearance()
@@ -135,4 +136,5 @@ router.beforeEach(async (to, from, next) => {
 router.afterEach(() => {
   done()
   loadDone()
+  ;(document.querySelector('#loading-mask') as HTMLElement).style.display = 'none'
 })

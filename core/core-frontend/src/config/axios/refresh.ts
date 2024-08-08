@@ -1,34 +1,32 @@
 import { useCache } from '@/hooks/web/useCache'
 import { refreshApi } from '@/api/login'
 import { useUserStoreWithOut } from '@/store/modules/user'
-import { useRequestStoreWithOut } from '@/store/modules/request'
 
 import { isLink } from '@/utils/utils'
 const { wsCache } = useCache()
 const userStore = useUserStoreWithOut()
-const requestStore = useRequestStoreWithOut()
 const refreshUrl = '/login/refresh'
+let cachedRequestList = []
 
 const expConstants = 10000
 
 const isExpired = () => {
   const exp = wsCache.get('user.exp')
-  if (!exp) {
+  const tokenStartTime = wsCache.get('user.tokenStartTime')
+  if (!tokenStartTime || !exp) {
     return false
   }
-  return exp - new Date().getTime() < expConstants
+  if (Date.now() > exp) {
+    return false
+  }
+  return new Date().getTime() - tokenStartTime > expConstants
 }
 
 const delayExecute = (token: string) => {
-  const cachedRequestList = requestStore.getRequestList
   cachedRequestList.forEach(cb => {
     cb(token)
   })
-  requestStore.cleanCacheRequest()
-  /* cachedRequestList.forEach(cb => {
-    cb(token)
-  })
-  cachedRequestList = [] */
+  cachedRequestList = []
 }
 
 const getRefreshStatus = () => {
@@ -39,8 +37,7 @@ const setRefreshStatus = (status: boolean) => {
 }
 
 const cacheRequest = cb => {
-  requestStore.addCacheRequest(cb)
-  // cachedRequestList.push(cb)
+  cachedRequestList.push(cb)
 }
 
 export const configHandler = config => {
@@ -61,6 +58,7 @@ export const configHandler = config => {
           .then(res => {
             userStore.setToken(res.data.token)
             userStore.setExp(res.data.exp)
+            userStore.setTokenStartTime(Date.now())
             config.headers['X-DE-TOKEN'] = res.data.token
             delayExecute(res.data.token)
           })

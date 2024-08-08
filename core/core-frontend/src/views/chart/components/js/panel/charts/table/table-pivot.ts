@@ -204,6 +204,11 @@ export class TablePivot extends S2ChartView<PivotSheet> {
       tooltip: {
         getContainer: () => containerDom
       },
+      interaction:{
+        hoverHighlight: {
+          currentRow: true
+        },
+      },
       hierarchyType: basicStyle.tableLayoutMode ?? 'grid'
     }
 

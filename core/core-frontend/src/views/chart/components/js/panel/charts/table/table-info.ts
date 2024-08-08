@@ -109,8 +109,16 @@ export class TableInfo extends S2ChartView<TableSheet> {
       conditions: this.configConditions(chart),
       tooltip: {
         getContainer: () => containerDom,
+        colCell:{
+          enable:true
+        },
         renderTooltip: sheet => new SortTooltip(sheet)
-      }
+      },
+      interaction:{
+        hoverHighlight: {
+          currentRow: true
+        },
+      },
     }
     // 开启序号之后，第一列就是序号列，修改 label 即可
     if (s2Options.showSeriesNumber) {
@@ -143,7 +151,10 @@ export class TableInfo extends S2ChartView<TableSheet> {
       s2Options.interaction = {
         resize: {
           colCellVertical: false
-        }
+        },
+        hoverHighlight: {
+          currentRow: true
+        },
       }
       s2Options.colCell = (node, sheet, config) => {
         node.label = ' '

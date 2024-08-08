@@ -335,7 +335,18 @@ const nodeClick = data => {
 const getPanelViewList = dvId => {
   viewDetailList(dvId).then(rsp => {
     state.viewIdFieldArrayMap = {}
-    state.currentLinkPanelViewArray = rsp.data
+    let arr = []
+    componentData.value.forEach(item => {
+      arr.push(item.id)
+      if (item.innerType == 'DeTabs') {
+        item.propValue.forEach(element => {
+          (element.componentData || []).forEach(x => {
+            arr.push(x.id)
+          })
+        })
+      }
+    })
+    state.currentLinkPanelViewArray = rsp.data.filter(x => arr.includes(x.id))
     if (state.currentLinkPanelViewArray) {
       state.currentLinkPanelViewArray.forEach(view => {
         state.viewIdFieldArrayMap[view.id] = view.tableFields

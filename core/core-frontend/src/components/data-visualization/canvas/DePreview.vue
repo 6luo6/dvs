@@ -119,6 +119,8 @@ const canvasStyle = computed(() => {
           : '100%'
         : changeStyleWithScale(canvasStyleData.value?.height, scaleMin.value) + 'px'
     }
+  } else if (!isMainCanvas(canvasId.value)) {
+    style['height'] = '100%'
   }
   if (!dashboardActive.value) {
     style['overflow-y'] = 'hidden'
@@ -157,16 +159,8 @@ watch(
 useEmitt({
   name: 'tabCanvasChange-' + canvasId.value,
   callback: function () {
+    console.log('tabCanvasChange--' + canvasId.value)
     restore()
-  }
-})
-
-useEmitt({
-  name: 'componentRefresh',
-  callback: function () {
-    if (isMainCanvas(canvasId.value)) {
-      refreshDataV()
-    }
   }
 })
 
@@ -184,6 +178,13 @@ const resetLayout = () => {
       scaleMin.value = isDashboard()
         ? Math.min(scaleWidth.value, scaleHeight.value)
         : (canvasWidth * 100) / canvasStyleData.value.width
+      if (canvasId.value != 'canvas-main') {
+        scaleWidth.value = outerScale.value * 100
+        if (isFirst) {
+          changeRefComponentsSizeWithScale(componentData.value, canvasStyleScale.value, scaleWidth.value)
+        }
+        isFirst = false
+      }
       if (dashboardActive.value) {
         cellWidth.value = canvasWidth / pcMatrixCount.value.x
         cellHeight.value = canvasHeight / pcMatrixCount.value.y
@@ -236,15 +237,11 @@ const initRefreshTimer = () => {
       }
     }
     refreshTimer.value = setInterval(() => {
-      refreshDataV()
+      searchCount.value++
+      if (isMainCanvas(canvasId.value)) {
+        refreshOtherComponent(dvInfo.value.id, dvInfo.value.type)
+      }
     }, refreshTime)
-  }
-}
-
-const refreshDataV = () => {
-  searchCount.value++
-  if (isMainCanvas(canvasId.value)) {
-    refreshOtherComponent(dvInfo.value.id, dvInfo.value.type)
   }
 }
 
@@ -363,6 +360,18 @@ const filterBtnShow = computed(
   () => popAreaAvailable.value && popComponentData.value && popComponentData.value.length > 0
 )
 
+const isShow = item => {
+  if (!item.isShow) {
+    return item.isShow
+  }
+  const groupShowChart = componentData.value.filter(x => x.activeChange?.chartId)
+  const obj = groupShowChart.find(x => x.activeChange.chartId == item.id)
+  if (obj) {
+    return obj.activeChange.isActive
+  }
+  return true
+}
+
 defineExpose({
   restore
 })
@@ -398,7 +407,7 @@ defineExpose({
     ></canvas-opt-bar>
     <ComponentWrapper
       v-for="(item, index) in baseComponentData"
-      v-show="item.isShow"
+      v-show="isShow(item)"
       :active="item.id === (curComponent || {})['id']"
       :canvas-id="canvasId"
       :canvas-style-data="canvasStyleData"

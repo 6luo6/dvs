@@ -97,7 +97,7 @@ const initCopilotBase = async () => {
   if (aiCopilotCheck === 'CHECKED') {
     showOverlayCopilot.value = false
   } else {
-    showOverlayCopilot.value = true
+    showOverlayCopilot.value = false
   }
 }
 
@@ -133,7 +133,7 @@ onMounted(() => {
       v-else
       @click="handleIconClick"
       className="logo"
-      name="logo"
+      name="dvs"
     ></Icon>
     <el-menu
       :default-active="activeIndex"
@@ -146,10 +146,10 @@ onMounted(() => {
     </el-menu>
     <div class="operate-setting" v-if="!desktop">
       <XpackComponent jsname="c3dpdGNoZXI=" />
-      <el-icon style="margin: 0 10px" class="ai-icon copilot-icon" v-if="!showOverlayCopilot">
+      <el-icon style="margin: 0 10px" class="ai-icon copilot-icon" v-if="!showOverlayCopilot && appearanceStore.getShowAi">
         <Icon name="copilot" @click="handleCopilotClick" />
       </el-icon>
-      <Copilot @confirm="copilotConfirm" v-if="showOverlayCopilot" class="copilot-icon-tips" />
+      <Copilot @confirm="copilotConfirm" v-if="showOverlayCopilot && appearanceStore.getShowAi" class="copilot-icon-tips" />
 
       <el-icon
         style="margin: 0 10px"

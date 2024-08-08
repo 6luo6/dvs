@@ -111,6 +111,9 @@ const contentStyle = computed(() => {
     }
   } else {
     return {
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
       width: width * 1.5 + 'px',
       height: height * 1.5 + 'px'
     }

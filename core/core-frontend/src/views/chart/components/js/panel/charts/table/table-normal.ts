@@ -131,7 +131,12 @@ export class TableNormal extends S2ChartView<TableSheet> {
       tooltip: {
         getContainer: () => containerDom,
         renderTooltip: sheet => new SortTooltip(sheet)
-      }
+      },
+      interaction:{
+        hoverHighlight: {
+          currentRow: true
+        },
+      },
     }
     // 开启序号之后，第一列就是序号列，修改 label 即可
     if (s2Options.showSeriesNumber) {
@@ -160,7 +165,10 @@ export class TableNormal extends S2ChartView<TableSheet> {
       s2Options.interaction = {
         resize: {
           colCellVertical: false
-        }
+        },
+        hoverHighlight: {
+          currentRow: true
+        },
       }
       s2Options.colCell = (node, sheet, config) => {
         node.label = ' '

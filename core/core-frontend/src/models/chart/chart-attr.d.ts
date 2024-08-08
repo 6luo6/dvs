@@ -281,6 +281,10 @@ declare interface ChartBasicStyle {
    * 汇总表总计标签
    */
   summaryLabel: string
+  /**
+   * 地图颜色字段
+   */
+  mapColorField: string
 }
 /**
  * 表头属性

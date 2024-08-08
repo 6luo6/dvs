@@ -106,11 +106,19 @@
                   >
                     <el-radio label="_self">{{ t('visualization.now_window') }}</el-radio>
                     <el-radio label="_blank">{{ t('visualization.new_window') }}</el-radio>
+                    <el-radio label="modal">弹框</el-radio>
                   </el-radio-group>
                   <el-radio-group class="larger-radio" v-if="!state.linkJumpInfo" disabled>
                     <el-radio label="_self">{{ t('visualization.now_window') }}</el-radio>
                     <el-radio label="_blank">{{ t('visualization.new_window') }}</el-radio>
+                    <el-radio label="modal">弹框</el-radio>
                   </el-radio-group>
+                  <el-icon
+                    v-if="state.linkJumpInfo && state.linkJumpInfo.jumpType == 'modal'"
+                    style="margin-left: 10px; cursor: pointer"
+                    @click="openModalSetting"
+                    ><Setting
+                  /></el-icon>
                 </el-form-item>
               </el-header>
 
@@ -382,6 +390,11 @@
       </el-row>
     </div>
   </el-dialog>
+  <ModalSetting
+    ref="modalSettingRef"
+    @onModalSetting="onModalSetting"
+    :modalSetting="modalSetting"
+  ></ModalSetting>
 </template>
 
 <script lang="ts" setup>
@@ -391,7 +404,7 @@ import {
   updateJumpSet,
   viewTableDetailList
 } from '@/api/visualization/linkJump'
-import { reactive, ref, nextTick, computed, watch } from 'vue'
+import { reactive, ref, nextTick, computed, watch, PropType } from 'vue'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { fieldType } from '@/utils/attr'
 import { storeToRefs } from 'pinia'
@@ -405,6 +418,7 @@ import { Search } from '@element-plus/icons-vue'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
 import EmptyBackground from '@/components/empty-background/src/EmptyBackground.vue'
 import { filterEmptyFolderTree } from '@/utils/canvasUtils'
+import ModalSetting from './common/ModalSetting.vue'
 const dvMainStore = dvMainStoreWithOut()
 const { dvInfo, canvasViewInfo, componentData } = storeToRefs(dvMainStore)
 const linkJumpInfoTree = ref(null)
@@ -412,8 +426,19 @@ const { t } = useI18n()
 const dialogShow = ref(false)
 const snapshotStore = snapshotStoreWithOut()
 
-const resourceType = computed(() => (dvInfo.value.type === 'dashboard' ? '仪表板' : '数据大屏'))
+const props = defineProps({
+  chart: {
+    type: Object as PropType<ChartObj>,
+    required: true
+  }
+})
 
+const emit = defineEmits(['onModalSetting'])
+
+const resourceType = computed(() => (dvInfo.value.type === 'dashboard' ? '仪表板' : '数据大屏'))
+const modalSetting= computed(()=>{
+  return props.chart?.senior?.modalSetting
+})
 const state = reactive({
   loading: false,
   showSelected: false,
@@ -475,6 +500,7 @@ const state = reactive({
 })
 
 const outerContentEditor = ref(null)
+const modalSettingRef = ref()
 
 const dialogInit = viewItem => {
   state.showSelected = false
@@ -728,6 +754,14 @@ const filterNodeMethod = (value, data) => {
   return !value || data.checked
 }
 
+const openModalSetting = () => {
+  modalSettingRef.value.show()
+}
+
+const onModalSetting = val => {
+  emit('onModalSetting', val)
+}
+
 watch(
   () => state.showSelected,
   newValue => {
@@ -913,7 +947,7 @@ defineExpose({
 }
 
 .item-dimension:hover {
-  border: 1px solid var(--ed-color-primary, #3370ff);
+  border: 1px solid var(--blue-500, #3370ff);
   background: var(--ed-color-primary-1a, rgba(51, 112, 255, 0.1));
 }
 

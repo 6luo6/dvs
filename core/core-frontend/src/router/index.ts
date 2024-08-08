@@ -51,6 +51,13 @@ export const routes: AppRouteRecordRaw[] = [
     component: () => import('@/views/login/index.vue')
   },
   {
+    path: '/thirdLogin',
+    name: 'thirdLogin',
+    hidden: true,
+    meta: {},
+    component: () => import('@/views/login/thirdLogin.vue')
+  },
+  {
     path: '/admin-login',
     name: 'admin-login',
     hidden: true,

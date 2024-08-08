@@ -38,6 +38,7 @@ interface SelectConfig {
   }
   optionValueSource: number
   defaultValueCheck: boolean
+  selectIsDynamic: boolean
   multiple: boolean
   valueSource: {
     label: string
@@ -57,6 +58,7 @@ const props = defineProps({
         defaultValueCheck: false,
         optionValueSource: 0,
         multiple: false,
+        selectIsDynamic: false,
         checkedFieldsMap: {}
       }
     }
@@ -72,6 +74,7 @@ const selectValue = ref()
 const loading = ref(false)
 const multiple = ref(false)
 const options = shallowRef([])
+const optionsDynamic = shallowRef([])
 const unMountSelect: Ref = inject('unmount-select')
 const releaseSelect = inject('release-unmount-select', Function, true)
 const queryDataForId = inject('query-data-for-id', Function, true)
@@ -205,8 +208,13 @@ const handleValueChange = () => {
   }
 
   setCascadeDefault(emitCascadeConfig())
-
-  config.value.defaultValue = value
+  if (!config.value.selectIsDynamic) {
+    config.value.defaultValue = value
+  } else {
+    config.value.defaultValue = ''
+    config.value.defaultMapValue = ''
+    config.value.dynamicValue = value
+  }
   config.value.mapValue = setDefaultMapValue(
     Array.isArray(selectValue.value) ? [...selectValue.value] : [selectValue.value]
   )
@@ -237,6 +245,12 @@ const handleFieldIdDefaultChange = (val: string[]) => {
             value: `${ele}`
           }
         })
+      optionsDynamic.value = options.value.map((x, index) => {
+        return {
+          label: `第${index + 1}项`,
+          value: index
+        }
+      })
     })
     .finally(() => {
       loading.value = false
@@ -298,6 +312,12 @@ const handleFieldIdChange = (val: EnumValue) => {
           label: `${ele}`,
           value: `${ele}`,
           checked: oldArr.includes(ele)
+        }
+      })
+      optionsDynamic.value = options.value.map((x, index) => {
+        return {
+          label: `第${index + 1}项`,
+          value: index
         }
       })
     })
@@ -570,6 +590,9 @@ onBeforeMount(() => {
   })
 })
 
+const selectIsDynamicChange = () => {
+  selectValue.value = ''
+}
 defineExpose({
   displayTypeChange,
   mult,
@@ -578,6 +601,13 @@ defineExpose({
 </script>
 
 <template>
+  <div v-if="props.isConfig">
+    <div class="label">设置默认值</div>
+    <el-radio-group v-model="config.selectIsDynamic" @change="selectIsDynamicChange">
+      <el-radio :label="false">固定</el-radio>
+      <el-radio :label="true">动态</el-radio>
+    </el-radio-group>
+  </div>
   <el-select-v2
     v-if="multiple"
     key="multiple"
@@ -592,12 +622,12 @@ defineExpose({
     "
     multiple
     show-checked
-    clearable
+    :clearable="!config.defaultValueCheck"
     :style="selectStyle"
     collapse-tags
     :remote="config.optionValueSource === 1"
     :remote-method="remoteMethod"
-    :options="options"
+    :options="props.isConfig && config.selectIsDynamic ? optionsDynamic : options"
     collapse-tags-tooltip
   ></el-select-v2>
   <el-select-v2
@@ -606,7 +636,7 @@ defineExpose({
     key="single"
     v-loading="loading"
     @change="handleValueChange"
-    clearable
+    :clearable="!config.defaultValueCheck"
     ref="single"
     :style="selectStyle"
     filterable
@@ -618,7 +648,7 @@ defineExpose({
     :popper-class="
       visible ? 'load-select filter-select-popper_class' : 'filter-select-popper_class'
     "
-    :options="options"
+    :options="props.isConfig && config.selectIsDynamic ? optionsDynamic : options"
   >
     <template #default="{ item }">
       <el-radio-group v-model="selectValue">

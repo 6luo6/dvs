@@ -9,5 +9,6 @@ export default {
         return map
       }, {})
     }
-  }
+  },
+  sourcemap: true
 }

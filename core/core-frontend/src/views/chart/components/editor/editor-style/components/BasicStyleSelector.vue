@@ -585,7 +585,21 @@ onMounted(() => {
         />
       </el-form-item>
     </div>
-
+    <div v-if="showProperty('mapColorField')" >
+      <el-form-item
+        class="form-item"
+        :class="'form-item-' + themes"
+        label="地图颜色字段"
+      >
+        <el-input
+          size="small"
+          v-model="state.basicStyleForm.mapColorField"
+          :effect="themes"
+          clearable
+          @blur="changeBasicStyle('mapColorField')"
+        />
+      </el-form-item>
+    </div>
     <!--map end-->
 
     <!--table start-->

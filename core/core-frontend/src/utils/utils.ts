@@ -151,3 +151,13 @@ export function cutTargetTree(tree: BusiTreeNode[], targetId: string | number) {
 export const isLink = () => {
   return window.location.hash.startsWith('#/de-link/')
 }
+//格式化时间戳
+export const disposeDate = (time) => {
+  let date = new Date(time);
+  let month = `00${date.getMonth() + 1}`.slice(-2)
+  let day = `00${date.getDate()}`.slice(-2)
+  let hours = `00${date.getHours()}`.slice(-2)
+  let minutes = `00${date.getMinutes()}`.slice(-2)
+  let seconds = `00${date.getSeconds()}`.slice(-2)
+  return `${date.getFullYear()}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}

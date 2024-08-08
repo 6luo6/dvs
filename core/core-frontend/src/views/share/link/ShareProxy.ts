@@ -33,7 +33,7 @@ class ShareProxy {
     let m
     while ((m = regex.exec(searchText)) !== null) {
       const key = decodeURIComponent(m[1])
-      if (key === 'ticket') {
+      if (key === 'dvs_ticket') {
         return decodeURIComponent(m[2])
       }
     }
@@ -55,7 +55,7 @@ class ShareProxy {
     }
     const uuid = this.uuid
     const url = '/share/proxyInfo'
-    const inIframe = isInIframe()
+    const inIframe = false //isInIframe()
     const ticket = this.getTicket()
     const param = { uuid, ciphertext: null, inIframe, ticket }
     const ciphertext = wsCache.get(`link-${uuid}`)

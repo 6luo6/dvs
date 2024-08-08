@@ -11,7 +11,7 @@ const embeddedStore = useEmbedded()
 const dvMainStore = dvMainStoreWithOut()
 const { canvasStyleData, componentData, canvasViewInfo, canvasViewDataInfo, dvInfo } =
   storeToRefs(dvMainStore)
-const basePath = import.meta.env.VITE_API_BASEPATH
+const basePath = "/"+((location.pathname.split('/')[1]=='mobile.html'?'':location.pathname.split('/')[1]) || 'test') +import.meta.env.VITE_API_BASEPATH
 
 export function formatterUrl(url: string) {
   return url.replace('//de2api', '/de2api')

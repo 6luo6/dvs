@@ -21,3 +21,9 @@ export function getOuterParamsInfo(dvId) {
     loading: false
   })
 }
+
+export function queryWithDvId(dvId) {
+  return request.get({
+    url: '/outerParams/queryWithDvId/' + dvId
+  })
+}

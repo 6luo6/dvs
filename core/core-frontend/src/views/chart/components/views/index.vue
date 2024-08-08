@@ -2,6 +2,7 @@
 import { useI18n } from '@/hooks/web/useI18n'
 import ChartComponentG2Plot from './components/ChartComponentG2Plot.vue'
 import DeIndicator from '@/custom-component/indicator/DeIndicator.vue'
+import TextIndicator from '@/custom-component/indicator/TextIndicator.vue'
 import { useAppStoreWithOut } from '@/store/modules/app'
 import router from '@/router'
 import { useEmbedded } from '@/store/modules/embedded'
@@ -44,6 +45,7 @@ import { Base64 } from 'js-base64'
 import DeRichTextView from '@/custom-component/rich-text/DeRichTextView.vue'
 import ChartEmptyInfo from '@/views/chart/components/views/components/ChartEmptyInfo.vue'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
+import { findById } from '@/api/visualization/dataVisualization'
 import { viewFieldTimeTrans } from '@/utils/viewUtils'
 import { CHART_TYPE_CONFIGS } from '@/views/chart/components/editor/util/chart'
 import request from '@/config/axios'
@@ -54,7 +56,8 @@ const chartComponent = ref<any>()
 const { t } = useI18n()
 const dvMainStore = dvMainStoreWithOut()
 const { emitter } = useEmitt()
-
+const isShowModal = ref(false)
+const modalUrl = ref('')
 let innerRefreshTimer = null
 const appStore = useAppStoreWithOut()
 const isDataEaseBi = computed(() => appStore.getIsDataEaseBi)
@@ -111,7 +114,8 @@ const props = defineProps({
     type: Number,
     required: false,
     default: 1
-  }
+  },
+  dvType:{}
 })
 const dynamicAreaId = ref('')
 const { view, showPosition, element, active, searchCount, scale } = toRefs(props)
@@ -362,7 +366,27 @@ const divEmbedded = type => {
   useEmitt().emitter.emit('changeCurrentComponent', type)
 }
 
-const windowsJump = (url, jumpType) => {
+const windowsJump = (url, jumpType, jumpInfo) => {
+//弹框
+  if (jumpType == 'modal') {
+    //内部跳转 && 宽度自适应
+    if (jumpInfo.linkType == 'inner' && jumpInfo.targetDvId && modalSetting.value.isBodyFit) {
+      findById(jumpInfo.targetDvId, props.dvType).then(res => {
+        let canvasStyleData = JSON.parse(res.data.canvasStyleData)
+        _modalSetting.value.title = res.data.name
+        if(modalSetting.value.isBodyFit){
+          _modalSetting.value.width = canvasStyleData.width + 'px'
+          _modalSetting.value.height = canvasStyleData.height + 'px'
+        }
+        isShowModal.value = true
+        modalUrl.value = (location.origin + location.pathname).replace('mobile.html', '') + url
+      })
+    } else {
+      isShowModal.value = true
+      modalUrl.value = (location.origin + location.pathname).replace('mobile.html', '') + url
+    }
+    return
+  }
   try {
     const newWindow = window.open(url, jumpType)
     initOpenHandler(newWindow)
@@ -415,7 +439,7 @@ const jumpClick = param => {
             }?jumpInfoParam=${encodeURIComponent(Base64.encode(JSON.stringify(param)))}`
             const currentUrl = window.location.href
             localStorage.setItem('beforeJumpUrl', currentUrl)
-            windowsJump(url, jumpInfo.jumpType)
+            windowsJump(url, jumpInfo.jumpType, jumpInfo)
           } else {
             ElMessage.warning(t('visualization.public_link_tips'))
           }
@@ -438,7 +462,7 @@ const jumpClick = param => {
             router.push(parseUrl(url))
             return
           }
-          windowsJump(url, jumpInfo.jumpType)
+          windowsJump(url, jumpInfo.jumpType ,jumpInfo)
         }
       } else {
         ElMessage.warning('未指定跳转仪表板')
@@ -457,7 +481,7 @@ const jumpClick = param => {
         return
       }
 
-      windowsJump(url, jumpInfo.jumpType)
+      windowsJump(url, jumpInfo.jumpType,jumpInfo)
     }
   } else {
   }
@@ -790,6 +814,19 @@ const loadPluginCategory = data => {
     }
   })
 }
+
+const closeModal = () => {
+  isShowModal.value = false
+}
+
+let _modalSetting = ref({
+  title:"",
+  width:"",
+  height:""
+})
+const modalSetting = computed<ModalSetting>(() => {
+  return { ...(view.value.senior.modalSetting || {}), ..._modalSetting.value }
+})
 </script>
 
 <template>
@@ -890,6 +927,16 @@ const loadPluginCategory = data => {
         :themes="canvasStyleData.dashboard.themeColor"
         ref="chartComponent"
         :view="view"
+        @onJumpClick="jumpClick"
+        :show-position="showPosition"
+      />
+      <TextIndicator
+        :scale="scale"
+        v-else-if="showChartView(ChartLibraryType.TextIndicator)"
+        :themes="canvasStyleData.dashboard.themeColor"
+        ref="chartComponent"
+        :view="view"
+        @onJumpClick="jumpClick"
         :show-position="showPosition"
       />
       <chart-component-g2-plot
@@ -928,15 +975,61 @@ const loadPluginCategory = data => {
       :view-icon="view.type"
     ></chart-empty-info>
     <drill-path :drill-filters="state.drillFilters" @onDrillJump="drillJump" />
-    <XpackComponent
-      ref="openHandler"
-      jsname="L2NvbXBvbmVudC9lbWJlZGRlZC1pZnJhbWUvT3BlbkhhbmRsZXI="
-    />
-    <XpackComponent
-      v-if="!pluginLoaded && view.isPlugin"
-      jsname="L2NvbXBvbmVudC9wbHVnaW5zLWhhbmRsZXIvVmlld0NhdGVnb3J5SGFuZGxlcg=="
-      @load-plugin-category="loadPluginCategory"
-    />
+    <Teleport to="#preview-canvas-main" v-if="isShowModal">
+      <el-dialog
+        v-model="isShowModal"
+        :show-close="false"
+        :width="modalSetting.maxWidth || modalSetting.width"
+        class="modal_iframe_box"
+        :style="{
+          '--modal_iframe_body_padding': modalSetting.bodyPadding + 'px',
+          '--modal_iframe_body_max_height': modalSetting.maxHeight,
+          '--modal_iframe_body_height': modalSetting.height,
+          '--modal_iframe_body_bg_color': modalSetting.bodyBgColor
+        }"
+      >
+        <template #header="{ close, titleId, titleClass }">
+          <div class="my-header" style="color: #646a73">
+            <h4
+              v-if="modalSetting.isShowTitle"
+              :id="titleId"
+              :class="titleClass"
+              :style="{
+                color: modalSetting.titleColor,
+                background: modalSetting.titleBgColor,
+                fontSize: modalSetting.titleFontSize + 'px',
+                textAlign: modalSetting.titleHPosition,
+                fontWeight: modalSetting.titleIsBolder ? 'bold' : '',
+                fontStyle: modalSetting.titleIsItalic ? 'italic' : '',
+                letterSpacing: modalSetting.titleLetterSpace + 'px',
+                padding: modalSetting.titleVPadding + 'px ' + modalSetting.titleHPadding + 'px'
+              }"
+            >
+              {{ modalSetting.title }}
+            </h4>
+            <el-icon
+              v-if="modalSetting.showCloseIcon"
+              :style="{
+                position: 'absolute',
+                cursor: 'pointer',
+                top: modalSetting.iconTop + 'px',
+                right: modalSetting.iconRight + 'px'
+              }"
+              :size="modalSetting.iconSize"
+              :color="modalSetting.iconColor"
+              @click="close"
+              ><component :is="modalSetting.closeIcon"
+            /></el-icon>
+          </div>
+        </template>
+        <div style="width: 100%; height: 100%; overflow: scroll">
+          <iframe
+            :src="modalUrl"
+            :style="{ width: modalSetting.width, height: modalSetting.height }"
+          ></iframe>
+        </div>
+      </el-dialog>
+    </Teleport>
   </div>
 </template>
 

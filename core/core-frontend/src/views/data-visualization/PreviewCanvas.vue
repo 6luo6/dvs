@@ -3,6 +3,7 @@ import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { onMounted, reactive, ref } from 'vue'
 import DePreview from '@/components/data-visualization/canvas/DePreview.vue'
 import router from '@/router'
+import { useRoute } from 'vue-router'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import ExportExcel from '@/views/visualized/data/dataset/ExportExcel.vue'
 import { initCanvasData } from '@/utils/canvasUtils'
@@ -37,9 +38,9 @@ const props = defineProps({
   },
   ticketArgs: propTypes.string.def(null)
 })
-
+const route =useRoute()
 const loadCanvasDataAsync = async (dvId, dvType) => {
-  const jumpInfoParam = embeddedStore.jumpInfoParam || router.currentRoute.value.query.jumpInfoParam
+  const jumpInfoParam = embeddedStore.jumpInfoParam || route.query.jumpInfoParam
   let jumpParam
   // 获取外部跳转参数
   if (jumpInfoParam) {

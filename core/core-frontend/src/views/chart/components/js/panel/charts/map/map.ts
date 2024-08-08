@@ -45,7 +45,14 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
   properties: EditorProperty[] = [...MAP_EDITOR_PROPERTY, 'legend-selector']
   propertyInner: EditorPropertyInner = {
     ...MAP_EDITOR_PROPERTY_INNER,
-    'basic-style-selector': ['colors', 'alpha', 'areaBorderColor', 'zoom', 'gradient-color'],
+    'basic-style-selector': [
+      'colors',
+      'alpha',
+      'areaBorderColor',
+      'zoom',
+      'gradient-color',
+      'mapColorField'
+    ],
     'legend-selector': ['icon', 'fontSize', 'color']
   }
   axis = MAP_AXIS_TYPE
@@ -53,12 +60,12 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
     xAxis: {
       name: `${t('chart.area')} / ${t('chart.dimension')}`,
       type: 'd',
-      limit: 1
+      limit: 2
     },
     yAxis: {
       name: `${t('chart.chart_data')} / ${t('chart.quota')}`,
-      type: 'q',
-      limit: 1
+      type: 'q'
+      // limit: 1
     }
   }
 
@@ -95,6 +102,35 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
     } else {
       data = sourceData
     }
+    let dataArr =[];
+    let colorField = chart.data?.sourceFields.find(
+      x => x.name == chart.customAttr.basicStyle?.mapColorField
+    )?.id
+    chart.data?.data.forEach(item => {
+      if (item.dimensionList.length > 1) {
+        item.dimensionList.forEach((el, index) => {
+          if (index == 0) {
+            item.name = item.field = el.value
+          }
+          if (colorField && colorField == el.id) {
+            item[chart.customAttr.basicStyle?.mapColorField] = el.value
+          }
+
+          item[el.id] = el.value
+        })
+      }
+      let obj = dataArr.find(x => x.name == item.name)
+      if (obj && item.quotaList?.[0]) {
+        obj[item.quotaList[0].id] = item.value
+        if (item.quotaList[0].id == chart.yAxis?.[0].id) {
+          obj.value = item.value
+        }
+      } else {
+        obj = { ...item }
+        obj[item.quotaList[0].id] = item.value
+        dataArr.push(obj)
+      }
+    })
     const geoJson = cloneDeep(await getGeoJsonFile(areaId))
     let options: ChoroplethOptions = {
       preserveDrawingBuffer: true,
@@ -106,7 +142,7 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
         type: 'geojson'
       },
       source: {
-        data: data,
+        data: dataArr,
         joinBy: {
           sourceField: 'name',
           geoField: 'name',
@@ -120,7 +156,7 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
       autoFit: true,
       chinaBorder: false,
       color: {
-        field: 'value'
+        field: chart.customAttr.basicStyle?.mapColorField || 'value'
       },
       style: {
         opacity: 1,
@@ -176,12 +212,14 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
     const senior = parseJson(chart.senior)
     const curAreaNameMapping = senior.areaMapping?.[areaId]
     handleGeoJson(geoJson, curAreaNameMapping)
-    options.color = {
-      field: 'value',
-      value: [basicStyle.colors[0]],
-      scale: {
-        type: 'quantize',
-        unknown: basicStyle.areaBaseColor
+    if (!basicStyle?.mapColorField) {
+      options.color = {
+        field: 'value',
+        value: [basicStyle.colors[0]],
+        scale: {
+          type: 'quantize',
+          unknown: basicStyle.areaBaseColor
+        }
       }
     }
     if (!chart.data?.data?.length || !geoJson?.features?.length) {

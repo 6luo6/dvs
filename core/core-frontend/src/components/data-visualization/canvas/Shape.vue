@@ -48,7 +48,7 @@
           :style="{ color: element.commonBackground.innerImageColor }"
           :name="commonBackgroundSvgInner"
         ></Board>
-        <div class="component-slot" :style="slotStyle">
+        <div class="component-slot">
           <slot></slot>
         </div>
       </div>
@@ -492,8 +492,8 @@ const handleMouseDownOnShape = e => {
   const componentHeight = shapeInnerRef.value.offsetHeight
   const move = moveEvent => {
     hasMove = true
-    const curX = moveEvent.clientX
-    const curY = moveEvent.clientY
+    let curX = moveEvent.clientX
+    let curY = moveEvent.clientY
     const top = curY - startY + startTop
     const left = curX - startX + startLeft
     pos['top'] = top
@@ -504,6 +504,12 @@ const handleMouseDownOnShape = e => {
       !isGroupCanvas(canvasId.value) &&
       (left < -30 || left + componentWidth - canvasWidth > 30)
     ) {
+      let tabContainer = document.querySelector('#shape-id-' + canvasId.value.split('--')[0]) as HTMLElement
+      if (dvInfo.value.type === 'dataV' && tabContainer) {
+        let { x, y } = tabContainer.getBoundingClientRect()
+        curX = curX - x + tabContainer.offsetLeft
+        curY = curY - y + tabContainer.offsetTop
+      }
       contentDisplay.value = false
       dvMainStore.setMousePointShadowMap({
         mouseX: curX,
@@ -518,7 +524,8 @@ const handleMouseDownOnShape = e => {
       contentDisplay.value = true
     }
     // 仪表板进行Tab碰撞检查
-    dashboardActive.value && tabMoveInCheck()
+    // dashboardActive.value && tabMoveInCheck()
+    tabMoveInCheck()
     // 仪表板模式 会造成移动现象 当检测组件正在碰撞有效区内或者移入有效区内 则周边组件不进行移动
     if (
       dashboardActive.value &&
@@ -805,7 +812,7 @@ const componentBackgroundStyle = computed(() => {
       outerImage,
       innerPadding,
       borderRadius
-    } = element.value.commonBackground
+    } = element.value.activeChange?.isActive ? element.value.activeChange.background : element.value.commonBackground
     const style = { padding: innerPadding * scale.value + 'px', borderRadius: borderRadius + 'px' }
     let colorRGBA = ''
     if (backgroundColorSelect && backgroundColor) {
@@ -927,16 +934,6 @@ const tabMoveInCheck = async () => {
     }
   }
 }
-const slotStyle = computed(() => {
-  // 3d效果支持
-  if (element.value['multiDimensional'] && element.value['multiDimensional']?.enable) {
-    return {
-      transform: `rotateX(${element.value['multiDimensional'].x}deg) rotateY(${element.value['multiDimensional'].y}deg) rotateZ(${element.value['multiDimensional'].z}deg)`
-    }
-  } else {
-    return {}
-  }
-})
 
 const batchOptFlag = computed(() => {
   return batchOptStatus.value && dashboardActive.value
@@ -984,6 +981,7 @@ onMounted(() => {
 <style lang="less" scoped>
 .shape {
   position: absolute;
+
   .del-from-mobile {
     position: absolute;
     right: 12px;
@@ -1136,6 +1134,5 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   position: relative;
-  transform-style: preserve-3d;
 }
 </style>

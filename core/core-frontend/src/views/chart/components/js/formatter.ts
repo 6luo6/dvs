@@ -50,7 +50,7 @@ function transUnit(value, formatter) {
   return value / formatter.unit
 }
 
-function transDecimal(value, formatter) {
+export function transDecimal(value, formatter) {
   return value.toFixed(formatter.decimalCount)
 }
 

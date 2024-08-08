@@ -137,7 +137,7 @@ const initForm = type => {
       cron: '0 0/1 * * * ? *'
     }
   }
-  if (type === 'oracle') {
+  if (type === 'oracle' || type ==='DM') {
     form.value.configuration.connectionType = 'sid'
   }
 

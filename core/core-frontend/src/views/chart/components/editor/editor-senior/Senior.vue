@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { useI18n } from '@/hooks/web/useI18n'
+import animation from '@/views/chart/components/editor/editor-senior/components/Animate.vue'
 import FunctionCfg from '@/views/chart/components/editor/editor-senior/components/FunctionCfg.vue'
 import ScrollCfg from '@/views/chart/components/editor/editor-senior/components/ScrollCfg.vue'
 import AssistLine from '@/views/chart/components/editor/editor-senior/components/AssistLine.vue'
@@ -39,7 +40,9 @@ const emit = defineEmits([
   'onScrollCfgChange',
   'onThresholdChange',
   'onMapMappingChange',
-  'onBubbleAnimateChange'
+  'onBubbleAnimateChange',
+  'onModalSetting',
+  'onAnimateChange'
 ])
 
 const props = defineProps({
@@ -123,6 +126,14 @@ const onThresholdChange = val => {
 
 const onMapMappingChange = val => {
   emit('onMapMappingChange', val)
+}
+
+const onModalSetting = val => {
+  emit('onModalSetting', val)
+}
+
+const onAnimateChange = val => {
+  emit('onAnimateChange', val)
 }
 
 const onBubbleAnimateChange = val => {
@@ -383,6 +394,20 @@ const isDataEaseBi = computed(() => appStore.getIsDataEaseBi)
               @onBubbleAnimateChange="onBubbleAnimateChange"
             />
           </collapse-switch-item>
+	  <el-collapse-item
+            :effect="themes"
+            v-if="showProperties('animate')"
+            name="animate"
+            title="动画"
+            @modelChange="onAnimateChange"
+          >
+            <animation
+              :themes="themes"
+              :chart="props.chart"
+              :property-inner="propertyInnerAll['animate']"
+              @onAnimateChange="onAnimateChange"
+            />
+          </el-collapse-item>
         </el-collapse>
       </el-row>
     </div>
@@ -390,7 +415,7 @@ const isDataEaseBi = computed(() => appStore.getIsDataEaseBi)
       {{ t('chart.chart_no_senior') }}
     </div>
     <!--跳转设置-->
-    <link-jump-set ref="linkJumpRef" />
+    <link-jump-set ref="linkJumpRef"  @onModalSetting="onModalSetting" :chart="props.chart" />
     <!--联动设置-->
     <linkage-set ref="linkageRef" />
   </el-row>

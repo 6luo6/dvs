@@ -185,6 +185,7 @@ const selectItem = ({ name, id, deType }) => {
   Object.assign(item.value, {
     fieldId: id,
     name,
+    field:computedFiledList.value[id],
     deType,
     filterType: 'logic',
     enumValue: '',

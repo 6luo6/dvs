@@ -415,6 +415,7 @@ const list = [
       width: 300,
       height: 200
     },
+    jumpActive:false,
     matrixStyle: {}
   },
   {
@@ -531,6 +532,34 @@ const list = [
     }
   },
   {
+    component: 'VText',
+    name: '文本',
+    label: '文本',
+    innerType: '',
+    editing: false,
+    canvasActive: false,
+    x: 1,
+    y: 1,
+    sizeX: 18,
+    sizeY: 7,
+    propValue: '文本标签',
+    style: {
+      width: 150,
+      height: 65,
+      fontSize:14,
+      fontWeight: 400,
+      letterSpacing: 0,
+      color: '',
+      fontFamily: 'Microsoft YaHei'
+    },
+    activeChange:{
+      isActive: false,
+      name: '',
+      chartId: '',
+    },
+    jumpActive:false
+  },
+  {
     component: 'ScrollText',
     name: '跑马灯',
     label: '跑马灯',
@@ -578,6 +607,10 @@ export function findNewComponentFromList(
       newComponent['commonBackground'] = deepCopy(
         COMMON_COMPONENT_BACKGROUND_MAP[curOriginThemes.value]
       )
+      if(newComponent.activeChange){
+        newComponent.activeChange.background={...newComponent['commonBackground']}
+        newComponent.activeChange.style={...newComponent['style']}
+      }
       newComponent.innerType = innerType
       if (comp.component === 'DeTabs') {
         newComponent.propValue[0].name = guid()

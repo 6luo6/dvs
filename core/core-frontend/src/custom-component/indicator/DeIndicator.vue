@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { getData } from '@/api/chart'
-import { ref, reactive, shallowRef, computed, CSSProperties, toRefs, PropType } from 'vue'
+import { ref, reactive, shallowRef, computed, CSSProperties, toRefs, PropType, watch } from 'vue'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { customAttrTrans, customStyleTrans, recursionTransObj } from '@/utils/canvasStyle'
 import { deepCopy } from '@/utils/utils'
@@ -11,9 +11,10 @@ import {
   DEFAULT_INDICATOR_NAME_STYLE,
   DEFAULT_INDICATOR_STYLE
 } from '@/views/chart/components/editor/util/chart'
-import { valueFormatter } from '@/views/chart/components/js/formatter'
+import { valueFormatter, transDecimal } from '@/views/chart/components/js/formatter'
 import { hexColorToRGBA } from '@/views/chart/components/js/util'
 import { storeToRefs } from 'pinia'
+import { TransitionPresets, useTransition } from '@vueuse/core'
 
 const props = defineProps({
   view: {
@@ -160,17 +161,33 @@ const thresholdColor = computed(() => {
   return { color, backgroundColor }
 })
 
-const formattedResult = computed(() => {
-  let _result = result.value
-
-  if (_result === '-') {
-    return _result
+//中间值
+let midValue = ref(0)
+watch(result, val => {
+  if (typeof val == 'number') {
+    midValue.value = val
   }
-
+})
+const output = useTransition(midValue, {
+  duration: Number(view.value.senior?.animateForm.countDuration || 1000),
+  transition: TransitionPresets.linear
+})
+const formattedResult = computed(() => {
+  let _result = view.value.senior?.animateForm?.isCount ? output.value : result.value
+  if (result.value === '-') {
+    return result
+  }
   // 格式化
   if (view.value.yAxis && view.value.yAxis.length > 0 && view.value.yAxis[0].formatterCfg) {
+    //自动格式
+    if (view.value.yAxis[0].formatterCfg.type === 'auto') {
+      let arr = String(result.value).split('.')
+      let decimalLength = arr[1] ? arr[1].length : 0
+      _result = transDecimal(_result, decimalLength)
+    }
     return valueFormatter(_result, view.value.yAxis[0].formatterCfg)
   }
+
   return _result
 })
 
@@ -372,6 +389,16 @@ const calcData = (view, callback) => {
   } else {
     callback?.()
   }
+}
+
+function jump() {
+  const jumpParam = {
+    option: 'jump',
+    viewId: view.value.id,
+    dimensionList: chartData.value.fields,
+    quotaList: []
+  }
+  emit('onJumpClick', jumpParam)
 }
 
 defineExpose({

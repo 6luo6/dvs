@@ -13,7 +13,7 @@ import { setupCustomComponent } from '@/custom-component'
 import { installDirective } from '@/directive'
 import '@/utils/DateUtil'
 import '@/permission'
-import WebSocketPlugin from '../../websocket'
+// import WebSocketPlugin from '../../websocket'
 const setupAll = async () => {
   const app = createApp(App)
   installDirective(app)
@@ -23,7 +23,7 @@ const setupAll = async () => {
   setupElementPlus(app)
   setupCustomComponent(app)
   setupElementPlusIcons(app)
-  app.use(WebSocketPlugin)
+  // app.use(WebSocketPlugin)
   app.mount('#app')
 }
 

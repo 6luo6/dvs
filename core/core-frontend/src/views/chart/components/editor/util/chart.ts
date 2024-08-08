@@ -715,6 +715,10 @@ export const DEFAULT_FUNCTION_CFG: ChartFunctionCfg = {
   emptyDataStrategy: 'breakLine',
   emptyDataFieldCtrl: []
 }
+export const DEFAULT_ANIMATE: ChartAnimate = {
+  isCount: false,
+  countDuration: 1000
+}
 export const DEFAULT_ASSIST_LINE_CFG: ChartAssistLineCfg = {
   enable: false,
   assistLine: []
@@ -1139,6 +1143,13 @@ export const CHART_TYPE_CONFIGS = [
         value: 'indicator',
         title: t('chart.chart_indicator'),
         icon: 'indicator'
+      },
+      {
+        render: 'custom',
+        category: 'quota',
+        value: 'textIndicator',
+        title: '文本卡',
+        icon: 'indicator'
       }
     ]
   },
@@ -1535,7 +1546,35 @@ export const DEFAULT_BASIC_STYLE: ChartBasicStyle = {
   showSummary: false,
   summaryLabel: '总计',
   seriesColor: [],
-  layout: 'horizontal'
+  layout: 'horizontal',
+  mapColorField: ''
+}
+
+export const DEFAULT_MODAL: ModalSetting = {
+  isShowTitle: true,
+  title: '',
+  titleColor: '#000',
+  titleBgColor: '#fff',
+  titleFontSize: 24,
+  titleLetterSpace: '1px',
+  titleIsBolder: false,
+  titleIsItalic: false,
+  titleHPosition: 'center',
+  titleHPadding: 0,
+  titleVPadding: 10,
+  showCloseIcon: true,
+  closeIcon: 'Close',
+  iconSize: 24,
+  iconColor: '#646a73',
+  iconTop: 10,
+  iconRight: 10,
+  bodyPadding: 0,
+  isBodyFit: true,
+  width: '600px',
+  height: '300px',
+  maxHeight: '80vh',
+  maxWidth: '',
+  bodyBgColor: '#fff'
 }
 
 export const BASE_VIEW_CONFIG = {
@@ -1590,6 +1629,8 @@ export const BASE_VIEW_CONFIG = {
     threshold: DEFAULT_THRESHOLD,
     scrollCfg: DEFAULT_SCROLL,
     areaMapping: {},
+    modalSetting: DEFAULT_MODAL,
+    animateForm: DEFAULT_ANIMATE,
     bubbleCfg: DEFAULT_BUBBLE_ANIMATE
   },
   flowMapStartName: [],

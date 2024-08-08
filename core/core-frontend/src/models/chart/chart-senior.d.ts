@@ -26,6 +26,14 @@ declare interface ChartSenior {
    * 气泡动效
    */
   bubbleCfg: BubbleCfg
+  /**
+   * 弹框设置
+   */
+  modalSetting: Record<string, any>
+  /**
+   * 动画设置
+   */
+  animateForm: ChartAnimate
 }
 
 /**
@@ -234,4 +242,49 @@ declare interface BubbleCfg {
    * 水波环数
    */
   rings: number
+}
+/**
+ * 弹框设置
+ */
+declare interface ModalSetting {
+  /*
+   * 是否显示标题
+   */
+  isShowTitle: boolean
+  title: string
+  titleColor: string
+  titleBgColor: string
+  titleFontSize: number
+  titleLetterSpace: string
+  titleIsBolder: boolean
+  titleIsItalic: boolean
+  titleHPadding: number
+  titleVPadding: number
+  titleHPosition: 'left' | 'center' | 'right'
+  showCloseIcon: boolean
+  closeIcon: string
+  iconSize: number
+  iconColor: string
+  iconTop: number
+  iconRight: number
+  bodyPadding: number
+  isBodyFit: boolean
+  width: string
+  height: string
+  maxHeight: string
+  maxWidth: string
+  bodyBgColor: string
+}
+/**
+ * 动画设置
+ */
+declare interface ChartAnimate {
+  /*
+   * 是否数字滚动
+   */
+  isCount:boolean
+  /*
+   * 数字滚动时间
+   */
+  countDuration:number
 }

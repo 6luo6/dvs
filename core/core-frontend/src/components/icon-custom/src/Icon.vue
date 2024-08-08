@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { propTypes } from '@/utils/propTypes'
 
+import dvs from '@/assets/svg/dvs.svg'
 import _401 from '@/assets/svg/401.svg'
 import _403 from '@/assets/svg/403.svg'
 import APIDs from '@/assets/svg/API-ds.svg'
@@ -661,12 +662,8 @@ import wizard_quick_start from '@/assets/svg/wizard_quick_start.svg'
 import wordCloudDark from '@/assets/svg/word-cloud-dark.svg'
 import wordCloudOrigin from '@/assets/svg/word-cloud-origin.svg'
 import wordCloud from '@/assets/svg/word-cloud.svg'
-import icon_multi_line_outlined from '@/assets/svg/icon_multi-line_outlined.svg'
-import icon_radio_outlined from '@/assets/svg/icon_radio_outlined.svg'
-import icon_single_line_outlined from '@/assets/svg/icon_single-line_outlined.svg'
-import icon_todo_outlined from '@/assets/svg/icon_todo_outlined.svg'
-import icon_file_doc_colorful from '@/assets/svg/icon_file-doc_colorful.svg'
 const iconMap = {
+  dvs: dvs,
   '401': _401,
   '403': _403,
   'API-ds': APIDs,
@@ -1067,10 +1064,6 @@ const iconMap = {
   'icon_right-association': icon_rightAssociation,
   icon_right_outlined: icon_right_outlined,
   icon_scroll_filled: icon_scroll_filled,
-  icon_radio_outlined: icon_radio_outlined,
-  icon_todo_outlined: icon_todo_outlined,
-  'icon_single-line_outlined': icon_single_line_outlined,
-  'icon_multi-line_outlined': icon_multi_line_outlined,
   'icon_search-outline_outlined': icon_searchOutline_outlined,
   icon_search: icon_search,
   'icon_share-label_filled': icon_shareLabel_filled,
@@ -1329,8 +1322,7 @@ const iconMap = {
   wizard_quick_start: wizard_quick_start,
   'word-cloud-dark': wordCloudDark,
   'word-cloud-origin': wordCloudOrigin,
-  'word-cloud': wordCloud,
-  'icon_file-doc_colorful': icon_file_doc_colorful
+  'word-cloud': wordCloud
 }
 
 const props = defineProps({

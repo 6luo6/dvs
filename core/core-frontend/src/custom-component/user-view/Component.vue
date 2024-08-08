@@ -84,6 +84,7 @@ const onPointClick = param => {
       :scale="scale"
       :active="active"
       :view="view"
+      :dvType="dvType"
       :element="element"
       :show-position="showPosition"
       :search-count="searchCount"

@@ -12,7 +12,9 @@ export class IndicatorChartView extends AbstractChartView {
     'indicator-value-selector',
     'indicator-name-selector',
     'threshold',
-    'function-cfg'
+    'function-cfg',
+    'jump-set',
+    'animate'
   ]
   propertyInner: EditorPropertyInner = {
     'background-overall-component': ['all'],
@@ -49,7 +51,8 @@ export class IndicatorChartView extends AbstractChartView {
       'letterSpace',
       'fontShadow'
     ],
-    'function-cfg': ['emptyDataStrategy']
+    'function-cfg': ['emptyDataStrategy'],
+    'animate': ['count']
   }
   axis: AxisType[] = ['yAxis', 'filter']
   axisConfig: AxisConfig = {

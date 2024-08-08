@@ -157,7 +157,7 @@ export const useAppearanceStore = defineStore('appearanceStore', {
       this.loaded = true
       const resData = res.data
       if (!resData?.length) {
-        document.title = 'DataEase'
+        document.title = 'Funi dvs'
         return
       }
       const data: AppearanceState = { loaded: false, community: true }
@@ -169,6 +169,12 @@ export const useAppearanceStore = defineStore('appearanceStore', {
         }
       })
       data.community = isCommunity
+      //隐藏无用功能
+      data.showAi = "1"
+      data.showDoc = "1"
+      data.showAbout = "1"
+      data.community = false
+
       this.community = data.community
       if (this.community) {
         this.showDemoTips = data.showDemoTips
@@ -226,7 +232,7 @@ export const useAppearanceStore = defineStore('appearanceStore', {
       if (this.name) {
         document.title = this.name
       } else {
-        document.title = 'DataEase'
+        document.title = 'Funi dvs'
       }
       if (isDataEaseBi) return
       const link = document.querySelector('link[rel="icon"]')

@@ -16,5 +16,6 @@ module.exports = {
     arrowParens: 'avoid',     
     // 对象大括号内两边是否加空格 { a:0 }
     bracketSpacing: true,      
+    endOfLine: "auto" 
   }
   

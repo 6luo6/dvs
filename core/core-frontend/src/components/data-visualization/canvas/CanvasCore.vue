@@ -31,7 +31,8 @@ import {
   isDashboard,
   isGroupCanvas,
   isMainCanvas,
-  isSameCanvas
+  isSameCanvas,
+  useModal
 } from '@/utils/canvasUtils'
 import { guid } from '@/views/visualized/data/dataset/form/util'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
@@ -45,14 +46,21 @@ import DragInfo from '@/components/visualization/common/DragInfo.vue'
 import { activeWatermark } from '@/components/watermark/watermark'
 import { personInfoApi } from '@/api/user'
 import PopArea from '@/custom-component/pop-area/Component.vue'
+import ComponentHangPopver from '@/custom-component/independent-hang/ComponentHangPopver.vue'
 
 const snapshotStore = snapshotStoreWithOut()
 const dvMainStore = dvMainStoreWithOut()
 const composeStore = composeStoreWithOut()
 const contextmenuStore = contextmenuStoreWithOut()
+//弹框
+const { closeModal, isShowModal, modalUrl, modalSetting, jumpLink } = useModal()
+function jumpClick(linkJumpInfo, _modalSetting) {
+  // debugger
+  // modalSetting.value=_modalSetting;
+  // jumpLink(linkJumpInfo)
+}
 
-const { curComponent, dvInfo, editMode, tabMoveOutComponentId, canvasState } =
-  storeToRefs(dvMainStore)
+const { curComponent, dvInfo, editMode, tabMoveOutComponentId, canvasState } = storeToRefs(dvMainStore)
 const { editorMap, areaData } = storeToRefs(composeStore)
 const emits = defineEmits(['scrollCanvasToTop'])
 const props = defineProps({
@@ -328,6 +336,10 @@ const dashboardActive = computed(() => {
   return dvInfo.value.type === 'dashboard'
 })
 
+const dataVActive = computed(() => {
+  return dvInfo.value.type === 'dataV'
+})
+
 // 融合矩阵设计
 const renderOk = ref(false)
 const moveAnimate = ref(false)
@@ -538,8 +550,13 @@ const handleContextMenu = e => {
   }
 }
 
-const getComponentStyle = style => {
-  return getStyle(style, commonFilterAttrs)
+const getComponentStyle = item => {
+  if(item.activeChange && item.activeChange.isActive){
+    return getStyle(item.activeChange.style, commonFilterAttrs)
+  }
+  else{
+    return getStyle(item.style, commonFilterAttrs)
+  }
 }
 
 const getSvgComponentStyle = style => {
@@ -1138,7 +1155,10 @@ const forceComputed = () => {
   })
 }
 const addItemBox = item => {
-  syncShapeItemStyle(item, baseWidth.value, baseHeight.value)
+  //仪表盘才重新计算shape
+  if (dashboardActive.value) {
+    syncShapeItemStyle(item, baseWidth.value, baseHeight.value)
+  }
   forceComputed()
   nextTick(() => {
     addItem(item, componentData.value.length - 1)
@@ -1425,6 +1445,20 @@ const popAreaAvailable = computed(
   () => canvasStyleData.value?.popupAvailable && isMainCanvas(canvasId.value)
 )
 
+const moveOutFromTab = component => {
+  setTimeout(() => {
+    component.canvasId = canvasId.value
+    dvMainStore.addComponent({
+      component,
+      index: undefined,
+      isFromGroup: true,
+      componentData: componentData.value
+    })
+    console.log(componentData.value)
+    addItemBox(component)
+  }, 500)
+}
+
 onMounted(() => {
   if (isMainCanvas(canvasId.value)) {
     initSnapshotTimer()
@@ -1441,6 +1475,7 @@ onMounted(() => {
   eventBus.on('addDashboardItem-' + canvasId.value, addItemBox)
   eventBus.on('snapshotChange-' + canvasId.value, canvasInit)
   eventBus.on('doCanvasInit-' + canvasId.value, canvasInit)
+  eventBus.on('moveOutFromTab-' + canvasId.value, moveOutFromTab)
 })
 
 onBeforeUnmount(() => {
@@ -1458,6 +1493,17 @@ onBeforeUnmount(() => {
   eventBus.off('doCanvasInit' + canvasId.value, canvasInit)
 })
 
+const isShow = item => {
+  if (!item.isShow) {
+    return item.isShow
+  }
+  const groupShowChart = componentData.value.filter(x => x.activeChange?.chartId)
+  const obj = groupShowChart.find(x => x.activeChange.chartId == item.id)
+  if (obj) {
+    return obj.activeChange.isActive
+  }
+  return true
+}
 defineExpose({
   canvasSizeInit,
   canvasInit,
@@ -1481,12 +1527,13 @@ defineExpose({
     @contextmenu="handleContextMenu"
   >
     <drag-info v-if="dragInfoShow"></drag-info>
-    <canvas-opt-bar
+    <!-- 清除联动 -->
+    <!-- <canvas-opt-bar
       v-if="dvInfo.type === 'dataV'"
       :canvas-style-data="canvasStyleData"
       :component-data="componentData"
       :canvas-id="canvasId"
-    ></canvas-opt-bar>
+    ></canvas-opt-bar> -->
     <!-- 弹框区域 -->
     <PopArea
       v-if="popAreaAvailable"
@@ -1514,7 +1561,7 @@ defineExpose({
     <!--页面组件列表展示-->
     <Shape
       v-for="(item, index) in componentData"
-      v-show="item.isShow"
+      v-show="isShow(item)"
       :canvas-id="canvasId"
       :scale="curScale"
       :key="item.id"
@@ -1534,6 +1581,7 @@ defineExpose({
       @linkJumpSetOpen="linkJumpSetOpen(item)"
       @linkageSetOpen="linkageSetOpen(item)"
     >
+      <!--如果是图表 则动态获取预存的chart-view数据-->
       <component
         :is="findComponent(item.component)"
         v-if="item.component === 'UserView' || item['isPlugin']"
@@ -1542,7 +1590,7 @@ defineExpose({
         :active="item.id === curComponentId"
         :dv-type="dvInfo.type"
         :scale="curBaseScale"
-        :style="getComponentStyle(item.style)"
+        :style="getComponentStyle(item)"
         :prop-value="item.propValue"
         :is-edit="true"
         :view="canvasViewInfo[item.id]"
@@ -1551,6 +1599,7 @@ defineExpose({
         @input="handleInput"
         :dv-info="dvInfo"
         :canvas-active="canvasActive"
+        @jumpClick="jumpClick"
       />
       <component
         v-else-if="item.component.includes('Svg')"
@@ -1568,6 +1617,7 @@ defineExpose({
         :dv-info="dvInfo"
         :active="item.id === curComponentId"
         :canvas-active="canvasActive"
+        @jumpClick="jumpClick"
       />
       <component
         v-else
@@ -1576,7 +1626,7 @@ defineExpose({
         :scale="curBaseScale"
         class="component"
         :is-edit="true"
-        :style="getComponentStyle(item.style)"
+        :style="getComponentStyle(item)"
         :prop-value="item.propValue"
         :element="item"
         :request="item.request"
@@ -1585,6 +1635,7 @@ defineExpose({
         :dv-info="dvInfo"
         :active="item.id === curComponentId"
         :canvas-active="canvasActive"
+        @jumpClick="jumpClick"
       />
     </Shape>
     <!-- 右击菜单 -->
@@ -1596,6 +1647,61 @@ defineExpose({
     <user-view-enlarge ref="userViewEnlargeRef"></user-view-enlarge>
     <link-jump-set ref="linkJumpRef"></link-jump-set>
     <linkage-set ref="linkageRef"></linkage-set>
+    <Teleport to="#preview-canvas-main" v-if="isShowModal">
+      <el-dialog
+        v-model="isShowModal"
+        :show-close="false"
+        :width="modalSetting.maxWidth || modalSetting.width"
+        class="modal_iframe_box"
+        :style="{
+          '--modal_iframe_body_padding': modalSetting.bodyPadding + 'px',
+          '--modal_iframe_body_max_height': modalSetting.maxHeight,
+          '--modal_iframe_body_height': modalSetting.height,
+          '--modal_iframe_body_bg_color': modalSetting.bodyBgColor
+        }"
+      >
+        <template #header="{ close, titleId, titleClass }">
+          <div class="my-header" style="color: #646a73">
+            <h4
+              v-if="modalSetting.isShowTitle"
+              :id="titleId"
+              :class="titleClass"
+              :style="{
+                color: modalSetting.titleColor,
+                background: modalSetting.titleBgColor,
+                fontSize: modalSetting.titleFontSize + 'px',
+                textAlign: modalSetting.titleHPosition,
+                fontWeight: modalSetting.titleIsBolder ? 'bold' : '',
+                fontStyle: modalSetting.titleIsItalic ? 'italic' : '',
+                letterSpacing: modalSetting.titleLetterSpace + 'px',
+                padding: modalSetting.titleVPadding + 'px ' + modalSetting.titleHPadding + 'px'
+              }"
+            >
+              {{ modalSetting.title }}
+            </h4>
+            <el-icon
+              v-if="modalSetting.showCloseIcon"
+              :style="{
+                position: 'absolute',
+                cursor: 'pointer',
+                top: modalSetting.iconTop + 'px',
+                right: modalSetting.iconRight + 'px'
+              }"
+              :size="modalSetting.iconSize"
+              :color="modalSetting.iconColor"
+              @click="close"
+              ><component :is="modalSetting.closeIcon"
+            /></el-icon>
+          </div>
+        </template>
+        <div style="width: 100%; height: 100%; overflow: scroll">
+          <iframe
+            :src="modalUrl"
+            :style="{ width: modalSetting.width, height: modalSetting.height }"
+          ></iframe>
+        </div>
+      </el-dialog>
+    </Teleport>
   </div>
 </template>
 

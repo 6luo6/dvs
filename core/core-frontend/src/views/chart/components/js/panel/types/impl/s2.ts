@@ -94,7 +94,7 @@ export abstract class S2ChartView<P extends SpreadSheet> extends AntVAbstractCha
         }
         break
     }
-    if (!content) {
+    if (!content || cell.actualText == content ) {
       return
     }
     event.s2Instance = s2Instance

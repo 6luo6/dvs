@@ -15,7 +15,8 @@ export enum ChartLibraryType {
   ECHARTS = 'echarts',
   S2 = 's2',
   RICH_TEXT = 'rich-text',
-  INDICATOR = 'indicator'
+  INDICATOR = 'indicator',
+  TextIndicator = 'textIndicator'
 }
 export abstract class ChartWrapper<O> {
   chartInstance: O

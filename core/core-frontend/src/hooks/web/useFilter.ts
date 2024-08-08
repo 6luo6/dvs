@@ -1,9 +1,11 @@
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { storeToRefs } from 'pinia'
 import { getDynamicRange, getCustomTime } from '@/custom-component/v-query/time-format'
+import { getEnumValue, enumValueObj } from '@/api/dataset'
 import { getCustomRange } from '@/custom-component/v-query/time-format-dayjs'
+
 const dvMainStore = dvMainStoreWithOut()
-const { componentData } = storeToRefs(dvMainStore)
+const { componentData, vQuerySelectEnum } = storeToRefs(dvMainStore)
 
 const getDynamicRangeTime = (type: number, selectValue: any, timeGranularityMultiple: string) => {
   const timeType = (timeGranularityMultiple || '').split('range')[0]
@@ -96,7 +98,8 @@ const getValueByDefaultValueCheckOrFirstLoad = (
   optionValueSource: number,
   mapValue: any,
   displayType: string,
-  displayId: string
+  displayId: string,
+  item: any
 ) => {
   if (+displayType === 9) {
     if (firstLoad) {
@@ -118,12 +121,31 @@ const getValueByDefaultValueCheckOrFirstLoad = (
     ![1, 7].includes(+displayType)
   ) {
     if (firstLoad) {
+      if (!selectValue?.length) {
+        if (defaultValueCheck && item.selectIsDynamic) {
+          if (item.defaultValue) {
+            return item.defaultMapValue
+          }
+          let val = vQuerySelectEnum.value[item.id]?.[item.dynamicValue] || {}
+          item.defaultMapValue = [val.value]
+          item.defaultValue = val.label
+          return item.defaultMapValue
+        }
+      }
       return defaultValueCheck ? defaultMapValue : multiple ? [] : ''
     }
     return (selectValue?.length ? mapValue : selectValue) || ''
   }
 
   if (firstLoad && !selectValue?.length) {
+    if (defaultValueCheck && item.selectIsDynamic) {
+      if (item.defaultValue) {
+        return item.defaultValue
+      }
+      let val = vQuerySelectEnum.value[item.id]?.[item.dynamicValue]?.value
+      item.defaultValue = val
+      return val
+    }
     return defaultValueCheck ? defaultValue : multiple ? [] : ''
   }
   return selectValue ? selectValue : ''
@@ -323,7 +345,8 @@ export const searchQuery = (queryComponentList, filter, curComponentId, firstLoa
                 optionValueSource,
                 mapValue,
                 displayType,
-                displayId
+                displayId,
+                item
               )
             }
             if (
@@ -369,5 +392,66 @@ export const searchQuery = (queryComponentList, filter, curComponentId, firstLoa
           }
         })
     }
+  })
+}
+
+// 获取查询组件下拉值
+export const getVQueryEnumValue = componentDataList => {
+  const queryComponentList = componentDataList.filter(ele => ele.component === 'VQuery')
+  let promiseArr = []
+  queryComponentList.forEach(element => {
+    element.propValue.forEach(item => {
+      if (item.selectIsDynamic) {
+        const arr = Object.values(item.checkedFieldsMap).filter(ele => !!ele) as string[]
+        if (
+          [0, 1].includes(item.optionValueSource) &&
+          !!item.checkedFields.length &&
+          !!arr.length
+        ) {
+          let val = item.checkedFields.map(ele => item.checkedFieldsMap[ele]).filter(ele => !!ele)
+          if (item.optionValueSource == '0') {
+            promiseArr.push(
+              getEnumValue({
+                fieldIds: val,
+                resultMode: 0
+              }).then(res => {
+                let value = (res || [])
+                  .filter(ele => ele !== null)
+                  .map(ele => {
+                    return {
+                      label: ele,
+                      value: ele
+                    }
+                  })
+                dvMainStore.setVQuerySelectEnum(item.id, value)
+              })
+            )
+          } else if (item.optionValueSource == '1') {
+            promiseArr.push(
+              enumValueObj({
+                queryId: item.field.id,
+                displayId: item.displayId || item.field.id,
+                searchText: ''
+              }).then(res => {
+                let value = (res || []).map(ele => {
+                  return {
+                    label: ele[item.displayId || item.field.id],
+                    value: ele[item.field.id]
+                  }
+                })
+                dvMainStore.setVQuerySelectEnum(item.id, value)
+              })
+            )
+          } else {
+            dvMainStore.setVQuerySelectEnum(item.id, item.valueSource)
+          }
+        }
+      }
+    })
+  })
+  return new Promise((resolve, reject) => {
+    Promise.all(promiseArr).then(res => {
+      resolve(res)
+    })
   })
 }

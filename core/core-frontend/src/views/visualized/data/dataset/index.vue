@@ -1,6 +1,16 @@
 <script lang="tsx" setup>
 import { useI18n } from '@/hooks/web/useI18n'
-import { ref, reactive, shallowRef, computed, watch, onBeforeMount, nextTick, unref } from 'vue'
+import {
+  ref,
+  reactive,
+  shallowRef,
+  computed,
+  watch,
+  onBeforeMount,
+  nextTick,
+  unref,
+  provide
+} from 'vue'
 import ArrowSide from '@/views/common/DeResourceArrow.vue'
 import { useEmbedded } from '@/store/modules/embedded'
 import { useEmitt } from '@/hooks/web/useEmitt'
@@ -18,7 +28,8 @@ import { useMoveLine } from '@/hooks/web/useMoveLine'
 import { useRouter, useRoute } from 'vue-router'
 import CreatDsGroup from './form/CreatDsGroup.vue'
 import type { BusiTreeNode, BusiTreeRequest } from '@/models/tree/TreeNode'
-import { delDatasetTree, getDatasetPreview, barInfoApi } from '@/api/dataset'
+import { delDatasetTree, getDatasetPreview, barInfoApi, rowPermissionList, columnPermissionList, deleteRowPermission, dataSetRowPermissionInfo } from '@/api/dataset'
+import RowDrawer from './auth-tree/RowDrawer.vue'
 import EmptyBackground from '@/components/empty-background/src/EmptyBackground.vue'
 import DeResourceGroupOpt from '@/views/common/DeResourceGroupOpt.vue'
 import DatasetDetail from './DatasetDetail.vue'
@@ -135,6 +146,9 @@ const defaultNode = {
 const nodeInfo = reactive<Node>(cloneDeep(defaultNode))
 
 let allFields = []
+const filedList = ref({})
+provide('filedList', filedList)
+
 let columnsPreview = []
 let dataPreview = []
 
@@ -170,7 +184,152 @@ const allFieldsColumns = [
     width: 250
   }
 ]
+//行列表
+const rowCurrentPage = ref(1)
+const rowPageSize = ref(10)
+const rowTotal = ref(0)
+const RowDrawerRef = ref()
+const rowColumns = [
+  {
+    key: 'authTargetTypeName',
+    dataKey: 'authTargetTypeName',
+    title: '类型',
+    width: 300,
+    // cellRenderer: ({ rowData }) => {
+    //   let obj = {
+    //     role: '角色',
+    //     user: '用户',
+    //     dept: '系统变量',
+    //     bpass_interface: '数飞平台'
+    //   }
+    //   return obj[rowData.authTargetType]
+    // }
+  },
+  {
+    dataKey: 'enable',
+    title: '是否启用',
+    width: 300,
+    cellRenderer: ({ rowData }) => {
+      return rowData.enable ? '是' : '否'
+    }
+  },
+  // {
+  //   key: 'deType',
+  //   dataKey: 'deType',
+  //   title: '受限对象',
+  //   width: 250
+  // },
+  {
+    key: 'description',
+    dataKey: 'description',
+    title: '白名单',
+    width: 300
+  },
+  {
+    dataKey: 'operations',
+    title: '操作',
+    width: 300,
+    cellRenderer: ({ rowData }) => {
+      return (
+        <div>
+          <el-link
+            type="primary"
+            style="margin-left: 10px; font-size: 18px"
+            onClick={() => {
+              rowEdit(rowData)
+            }}
+          >
+            <el-icon>
+              <Icon name="icon_edit_outlined"></Icon>
+            </el-icon>
+          </el-link>
+          <el-link
+            type="primary"
+            style="margin-left: 10px; font-size: 18px"
+            onClick={() => {
+              rowDel(rowData)
+            }}
+          >
+            <el-icon>
+              <Icon name="icon_delete-trash_outlined"></Icon>
+            </el-icon>
+          </el-link>
+        </div>
+      )
+    }
+  }
+]
+function rowHandleCurrentChange(size) {
+  rowPageSize.value = size
+  getRowData()
+}
+function rowHandleSizeChange(size) {
+  rowPageSize.value = size
+  getRowData()
+}
+function showRowDrawer() {
+  RowDrawerRef.value.show(nodeInfo)
+}
 
+function getRowData() {
+  columns.value = rowColumns
+  tableData.value = []
+  rowPermissionList(rowCurrentPage.value, rowPageSize.value, nodeInfo.id).then(res => {
+    tableData.value = res.data.records
+    rowTotal.value = res.data.total
+  })
+}
+
+function rowEdit(row) {
+  dataSetRowPermissionInfo({ datasetId: nodeInfo.id, id: row.id }).then(res => {
+    RowDrawerRef.value.show(nodeInfo, res.data.tree, row)
+  })
+}
+function rowDel(row) {
+  ElMessageBox.confirm('确定删除该用户吗？', '', {
+    showClose: false,
+    confirmButtonText: '删除',
+    confirmButtonClass: 'ed-button--danger',
+    type: 'warning'
+  }).then(() => {
+    deleteRowPermission({ datasetId: nodeInfo.id, id: row.id }).then(res => {
+      getRowData()
+    })
+  })
+}
+//列列表
+const colColumns = [
+  {
+    key: 'name',
+    dataKey: 'name',
+    title: '字段名称',
+    width: 250
+  },
+  {
+    key: 'deType',
+    dataKey: 'deType',
+    title: '字段类型',
+    width: 250,
+    cellRenderer: ({ cellData: deType }) => (
+      <div style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
+        <ElIcon style={{ marginRight: '6px' }}>
+          <Icon
+            name={`field_${fieldType[deType]}`}
+            className={`field-icon-${fieldType[deType]}`}
+          ></Icon>
+        </ElIcon>
+        {t(`dataset.${fieldType[deType]}`) +
+          `${deType === 3 ? '(' + t('dataset.float') + ')' : ''}`}
+      </div>
+    )
+  },
+  {
+    key: 'description',
+    dataKey: 'description',
+    title: '字段备注',
+    width: 250
+  }
+]
 const dataPreviewLoading = ref(false)
 const { width, node } = useMoveLine('DATASOURCE')
 
@@ -330,6 +489,12 @@ const handleClick = (tabName: TabPaneName) => {
       getDatasetPreview(nodeInfo.id)
         .then(res => {
           allFields = (res?.allFields as unknown as Field[]) || []
+          filedList.value = allFields.reduce((pre, next) => {
+            if (next.id !== '-1') {
+              pre[next.id] = next
+            }
+            return pre
+          }, {})
           columnsPreview = generateColumns((res?.data?.fields as Field[]) || [])
           dataPreview = (res?.data?.data as Array<{}>) || []
           columns.value = columnsPreview
@@ -345,8 +510,10 @@ const handleClick = (tabName: TabPaneName) => {
       tableData.value = allFields
       break
     case 'row':
+      getRowData()
       break
     case 'column':
+      tableData.value = []
       break
     default:
       break
@@ -472,6 +639,14 @@ const defaultTab = [
   {
     title: t('data_set.structure_preview'),
     name: 'structPreview'
+  },
+  {
+    title: '行权限',
+    name: 'row'
+  },
+  {
+    title: '列权限',
+    name: 'column'
   }
 ]
 
@@ -804,6 +979,7 @@ const getMenuList = (val: boolean) => {
                     :label="column.title"
                     :width="columns.length - 1 === index ? 150 : 'auto'"
                     :fixed="columns.length - 1 === index ? 'right' : false"
+                    :show-overflow-tooltip="true"
                   >
                     <template #header>
                       <div class="flex-align-center">
@@ -824,20 +1000,48 @@ const getMenuList = (val: boolean) => {
                   </template>
                 </el-table>
               </template>
-            </div>
-          </template>
-          <template v-if="['row', 'column'].includes(activeName)">
-            <div class="table-row-column">
-              <XpackComponent
-                :active-name="activeName"
-                :dataset-id="nodeInfo.id"
-                jsname="ZGF0YXNldC1yb3ctcGVybWlzc2lvbnM="
-              />
-              <XpackComponent
-                :active-name="activeName"
-                :dataset-id="nodeInfo.id"
-                jsname="ZGF0YXNldC1jb2x1bW4tcGVybWlzc2lvbnM="
-              />
+              <el-auto-resizer v-if="activeName === 'row'">
+                <template #default="{ height, width }">
+                  <el-button @click="showRowDrawer" style="margin-bottom: 10px"> 添加 </el-button>
+                  <el-table-v2
+                    key="row"
+                    :columns="columns"
+                    v-loading="dataPreviewLoading"
+                    header-class="header-cell"
+                    :data="tableData"
+                    :width="width"
+                    :height="height"
+                    fixed
+                    ><template #empty>
+                      <empty-background description="暂无数据" img-type="noneWhite" /> </template
+                  ></el-table-v2>
+                  <el-pagination
+                    v-model:current-page="rowCurrentPage"
+                    v-model:page-size="rowPageSize"
+                    background
+                    layout="total,  prev, pager, next,sizes, jumper"
+                    :total="rowTotal"
+                    @size-change="rowHandleSizeChange"
+                    @current-change="rowHandleCurrentChange"
+                  />
+                </template>
+              </el-auto-resizer>
+              <el-auto-resizer v-if="activeName === 'column'">
+                <template #default="{ height, width }">
+                  <el-table-v2
+                    key="column"
+                    :columns="columns"
+                    v-loading="dataPreviewLoading"
+                    header-class="header-cell"
+                    :data="tableData"
+                    :width="width"
+                    :height="height"
+                    fixed
+                    ><template #empty>
+                      <empty-background description="暂无数据" img-type="noneWhite" /> </template
+                  ></el-table-v2>
+                </template>
+              </el-auto-resizer>
             </div>
           </template>
         </div>
@@ -852,6 +1056,7 @@ const getMenuList = (val: boolean) => {
       ref="resourceGroupOpt"
     ></de-resource-group-opt>
     <creat-ds-group @finish="getData()" ref="creatDsFolder"></creat-ds-group>
+    <RowDrawer ref="RowDrawerRef" @saveSuccess="getRowData" />
   </div>
 </template>
 

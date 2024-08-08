@@ -185,7 +185,9 @@ export const dvMainStore = defineStore('dataVisualization', {
       // 基础网格信息
       baseCellInfo: {},
       dataPrepareState: false, //数据准备状态
-      multiplexingStyleAdapt: true //复用样式跟随主题
+      multiplexingStyleAdapt: true, //复用样式跟随主题
+      //查询组件下拉枚举值
+      vQuerySelectEnum: {}
     }
   },
   actions: {
@@ -248,6 +250,22 @@ export const dvMainStore = defineStore('dataVisualization', {
       this.canvasStyleData.scale = value
     },
     setCanvasViewInfo(canvasViewInfo) {
+      let arr = []
+      this.componentData.forEach(item => {
+        arr.push(item.id)
+        if (item.innerType == 'DeTabs') {
+          item.propValue.forEach(element => {
+            ;(element.componentData || []).forEach(x => {
+              arr.push(x.id)
+            })
+          })
+        }
+      })
+      for (const key in canvasViewInfo) {
+        if (Object.prototype.hasOwnProperty.call(canvasViewInfo, key) && !arr.includes(key)) {
+          delete canvasViewInfo[key]
+        }
+      }
       this.canvasViewInfo = canvasViewInfo
     },
     getAppDataInfo() {
@@ -520,6 +538,7 @@ export const dvMainStore = defineStore('dataVisualization', {
       if (/\d/.test(index)) {
         this.curComponentIndex = null
         componentData.splice(index, 1)
+        this.canvasViewInfo[componentData.id] = undefined
       }
     },
     updateCurDvInfo(dvInfo) {
@@ -1011,6 +1030,7 @@ export const dvMainStore = defineStore('dataVisualization', {
                         // 单选
                         filterItem.selectValue = queryParams[0]
                         filterItem.defaultValue = queryParams[0]
+                        filterItem.outerParamsFilters = queryParams
                       }
                     } else if (filterItem.displayType === '1') {
                       // 1 时间类型
@@ -1295,6 +1315,9 @@ export const dvMainStore = defineStore('dataVisualization', {
         mobileLayout: false
       }
       this.canvasStyleData = { ...deepCopy(DEFAULT_CANVAS_STYLE_DATA_DARK), backgroundColor: null }
+    },
+    setVQuerySelectEnum(id, list) {
+      this.vQuerySelectEnum[id] = list
     },
     removeGroupArea(curComponentData = this.componentData) {
       // 清理临时组件

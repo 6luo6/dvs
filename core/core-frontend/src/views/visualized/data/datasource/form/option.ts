@@ -56,8 +56,20 @@ export const dsTypes = [
     extraParams: ''
   },
   {
+    type: 'kingbase',
+    name: 'KingBase',
+    catalog: 'OLTP',
+    extraParams: ''
+  },
+  {
     type: 'sqlServer',
     name: 'SQL Server',
+    catalog: 'OLTP',
+    extraParams: ''
+  },
+  {
+    type: 'dm',
+    name: 'DM',
     catalog: 'OLTP',
     extraParams: ''
   },

@@ -9,7 +9,7 @@
 <script lang="ts" setup>
 import { onMounted, nextTick, ref } from 'vue'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
-import PreviewCanvas from '@/views/data-visualization/PreviewCanvasMobile.vue'
+import PreviewCanvas from '@/views/data-visualization/PreviewCanvas.vue'
 import { ProxyInfo, shareProxy } from './ShareProxy'
 import Exp from './exp.vue'
 import router from '@/router/mobile'
@@ -26,7 +26,7 @@ onMounted(async () => {
   const proxyInfo = (await shareProxy.loadProxy()) as ProxyInfo
   curType.value = proxyInfo.type || 'dashboard'
   dvMainStore.setInMobile(true)
-  dvMainStore.setMobileInPc(curType.value === 'dashboard')
+  dvMainStore.setMobileInPc(true)
   if (!proxyInfo?.resourceId) {
     loading.value = false
     return
@@ -38,7 +38,7 @@ onMounted(async () => {
     if (curType.value === 'dashboard') {
       const method = pcanvas?.value?.loadCanvasDataAsync
       if (method) {
-        method(proxyInfo.resourceId, 'dashboard', null)
+        method(proxyInfo.resourceId, curType.value, null)
       }
       loading.value = false
     } else {

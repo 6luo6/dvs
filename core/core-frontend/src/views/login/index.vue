@@ -307,12 +307,12 @@ onMounted(async () => {
               <Icon
                 v-if="!loginLogoUrl && axiosFinished"
                 className="login-logo-icon"
-                name="DataEase"
+                name="dvs"
               ></Icon>
               <img v-if="loginLogoUrl && axiosFinished" :src="loginLogoUrl" alt="" />
             </div>
             <div class="login-welcome">
-              {{ slogan || '欢迎使用 DataEase 数据可视化分析工具' }}
+              {{ slogan || '欢迎使用 FUNI数据可视化分析平台' }}
             </div>
             <div class="login-form">
               <div class="default-login-tabs" v-if="activeName === 'simple'">

@@ -211,6 +211,10 @@ export const saveRowPermission = (data = {}) => {
   return request.post({ url: '/dataset/rowPermissions/save', data })
 }
 
+export const dataSetRowPermissionInfo = (data = {}) => {
+  return request.post({ url: '/dataset/rowPermissions/dataSetRowPermissionInfo', data })
+}
+
 export const saveColumnPermission = (data = {}) => {
   return request.post({ url: '/dataset/columnPermissions/save', data })
 }

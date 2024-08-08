@@ -41,22 +41,9 @@
         icon="Download"
         size="middle"
         :loading="exportLoading"
-        :disabled="requestStore.loadingMap[permissionStore.currentPath] > 0"
-        @click="downloadViewDetails('view')"
+        @click="downloadViewDetails"
       >
         导出Excel
-      </el-button>
-      <el-button
-        class="m-button"
-        v-if="optType === 'details' && authShow"
-        link
-        icon="Download"
-        size="middle"
-        :loading="exportLoading"
-        @click="downloadViewDetails('dataset')"
-        :disabled="requestStore.loadingMap[permissionStore.currentPath] > 0"
-      >
-        导出原始明细
       </el-button>
       <el-button
         class="m-button"
@@ -80,12 +67,10 @@
       v-if="dialogShow"
     >
       <div
-        id="enlarge-inner-content"
         class="enlarge-inner"
         :class="{
           'enlarge-inner-with-header': optType === 'details' && sourceViewType.includes('chart-mix')
         }"
-        v-loading="requestStore.loadingMap[permissionStore.currentPath]"
         ref="viewContainer"
         :style="customExport"
       >
@@ -143,15 +128,9 @@ import { assign } from 'lodash-es'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import { ElMessage, ElButton } from 'element-plus-secondary'
 import { exportPivotExcel } from '@/views/chart/components/js/panel/common/common_table'
-import { useRequestStoreWithOut } from '@/store/modules/request'
-import { usePermissionStoreWithOut } from '@/store/modules/permission'
-import { activeWatermark } from '@/components/watermark/watermark'
-import { personInfoApi } from '@/api/user'
 const downLoading = ref(false)
 const dvMainStore = dvMainStoreWithOut()
 const dialogShow = ref(false)
-const requestStore = useRequestStoreWithOut()
-const permissionStore = usePermissionStoreWithOut()
 let viewInfo = ref<DeepPartial<ChartObj>>(null)
 const config = ref(null)
 const canvasStyleData = ref(null)
@@ -164,7 +143,6 @@ const { dvInfo, editMode } = storeToRefs(dvMainStore)
 const exportLoading = ref(false)
 const sourceViewType = ref()
 const activeName = ref('left')
-const userInfo = ref(null)
 const DETAIL_CHART_ATTR: DeepPartial<ChartObj> = {
   render: 'antv',
   type: 'table-info',
@@ -268,9 +246,6 @@ const dialogInit = (canvasStyle, view, item, opt) => {
     }
     dataDetailsOpt()
   }
-  nextTick(() => {
-    initWatermark()
-  })
 }
 
 const dataDetailsOpt = () => {
@@ -300,15 +275,14 @@ const downloadViewImage = () => {
   htmlToImage()
 }
 
-const downloadViewDetails = (downloadType = 'view') => {
+const downloadViewDetails = () => {
   const viewDataInfo = dvMainStore.getViewDataDetails(viewInfo.value.id)
   const chartExtRequest = dvMainStore.getLastViewRequestInfo(viewInfo.value.id)
   const chart = {
     ...viewInfo.value,
     chartExtRequest,
     data: viewDataInfo,
-    type: sourceViewType.value,
-    downloadType: downloadType
+    type: sourceViewType.value
   }
   exportLoading.value = true
   exportExcelDownload(chart, () => {
@@ -364,7 +338,6 @@ const htmlToImage = () => {
   downLoading.value = true
   useEmitt().emitter.emit('renderChart-' + viewInfo.value.id)
   setTimeout(() => {
-    initWatermark()
     toPng(viewContainer.value)
       .then(dataUrl => {
         downLoading.value = false
@@ -373,44 +346,13 @@ const htmlToImage = () => {
         a.href = dataUrl
         a.click()
         useEmitt().emitter.emit('renderChart-' + viewInfo.value.id)
-        initWatermark()
       })
       .catch(error => {
         downLoading.value = false
-        initWatermark()
         useEmitt().emitter.emit('renderChart-' + viewInfo.value.id)
         console.error('oops, something went wrong!', error)
       })
   }, 500)
-}
-
-const initWatermark = () => {
-  if (dvInfo.value.watermarkInfo) {
-    if (userInfo.value && userInfo.value.model !== 'lose') {
-      activeWatermark(
-        dvInfo.value.watermarkInfo.settingContent,
-        userInfo.value,
-        'enlarge-inner-content',
-        'canvas-main',
-        dvInfo.value.selfWatermarkStatus,
-        0.5
-      )
-    } else {
-      personInfoApi().then(res => {
-        userInfo.value = res.data
-        if (userInfo.value && userInfo.value.model !== 'lose') {
-          activeWatermark(
-            dvInfo.value.watermarkInfo.settingContent,
-            userInfo.value,
-            'enlarge-inner-content',
-            'canvas-main',
-            dvInfo.value.selfWatermarkStatus,
-            0.5
-          )
-        }
-      })
-    }
-  }
 }
 
 defineExpose({

@@ -14,6 +14,8 @@ import { useEmbedded } from '@/store/modules/embedded'
 import { useLinkStoreWithOut } from '@/store/modules/link'
 import { config } from './config'
 import { configHandler } from './refresh'
+import { sm3 } from 'sm-crypto'
+import { guid } from '@/views/visualized/data/dataset/form/util.js'
 
 type AxiosErrorWidthLoading<T> = T & {
   config: {
@@ -33,7 +35,12 @@ import { useCache } from '@/hooks/web/useCache'
 
 const { wsCache } = useCache()
 const embeddedStore = useEmbedded()
-const basePath = import.meta.env.VITE_API_BASEPATH
+const basePath =
+  (import.meta.env.MODE !== 'localhost'
+    ? '/' +
+      ((location.pathname.split('/')[1] == 'mobile.html' ? '' : location.pathname.split('/')[1]) ||
+        'test')
+    : '') + import.meta.env.VITE_API_BASEPATH
 
 const embeddedBasePath =
   basePath.startsWith('./') && basePath.length > 2 ? basePath.substring(2) : basePath
@@ -69,7 +76,21 @@ const getTimeOut = () => {
   }
 
   xhr.open('get', url, false)
+  const token = sessionStorage.getItem('token') || localStorage.getItem('token')
+  const requestId = guid()
+  xhr.setRequestHeader('X-Funipaas-Request-Id', requestId)
+  if (!!token) {
+    xhr.setRequestHeader('X-FuniPaas-Authorization', token)
+    const configURL = new URL(
+      (import.meta.env.VITE_API_BASEPATH + '/sysParameter/requestTimeOut').replace('//', '/'),
+      location.origin
+    )
+    const digestStr = [configURL.pathname, requestId, token].join('$$')
+    const signDigest = sm3(digestStr)
+    xhr.setRequestHeader('X-FuniPaas-Request-Hash', signDigest)
+  }
   xhr.send()
+  console.log(time)
   return time
 }
 
@@ -111,6 +132,8 @@ service.interceptors.request.use(
       ;(config.headers as AxiosRequestHeaders)['X-DE-LINK-TOKEN'] = linkStore.getLinkToken
     } else if (embeddedStore.token) {
       ;(config.headers as AxiosRequestHeaders)['X-EMBEDDED-TOKEN'] = embeddedStore.token
+    } else if (wsCache.get('de-ldap-token')) {
+      ;(config.headers as AxiosRequestHeaders)['Authorization'] = wsCache.get('de-ldap-token')
     }
     if (wsCache.get('user.language')) {
       const key = wsCache.get('user.language')
@@ -138,6 +161,22 @@ service.interceptors.request.use(
       cancelMap[config.url] = c
     })
     config.loading && tryShowLoading(permissionStore.getCurrentPath)
+    //DONE hash鉴权---start
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token')
+    config.headers['X-Funipaas-Request-Id'] = guid()
+    if (!!token) {
+      config.headers['X-FuniPaas-Authorization'] = token
+      const configURL = new URL(
+        (import.meta.env.VITE_API_BASEPATH + '/' + config.url).replace('//', '/'),
+        location.origin
+      )
+      const digestStr = [configURL.pathname, config.headers['X-Funipaas-Request-Id'], token].join(
+        '$$'
+      )
+      const signDigest = sm3(digestStr)
+      config.headers['X-FuniPaas-Request-Hash'] = signDigest
+    }
+    //hash鉴权---end
     return config
   },
   (error: AxiosErrorWidthLoading<AxiosError>) => {
@@ -152,10 +191,10 @@ service.interceptors.response.use(
     response: AxiosResponse<any> & { config: InternalAxiosRequestConfig & { loading?: boolean } }
   ) => {
     executeVersionHandler(response)
-    /* if (response.headers['x-de-refresh-token']) {
+    if (response.headers['x-de-refresh-token']) {
       wsCache.set('user.token', response.headers['x-de-refresh-token'])
       wsCache.set('user.exp', new Date().getTime() + 90000)
-    } */
+    }
     if (response.headers['x-de-link-token']) {
       linkStore.setLinkToken(response.headers['x-de-link-token'])
     }
@@ -201,6 +240,18 @@ service.interceptors.response.use(
     }
   },
   (error: AxiosErrorWidthLoading<AxiosError>) => {
+    //登录过期
+    if (error.response.data.code == '20006') {
+      ElMessage.error('登录过期，请重新登录！')
+      wsCache.delete('user.token')
+      setTimeout(() => {
+        location.href =
+          location.origin +
+          '/' +
+          (location.pathname.split('/')[1] || 'test') +
+          '/casapp/#/govUserCenter/dashboard/home'
+      }, 1500)
+    }
     if (!error?.response) {
       return Promise.reject(error)
     }
@@ -235,7 +286,7 @@ service.interceptors.response.use(
     if (header.has('DE-FORBIDDEN-FLAG')) {
       showMsg('当前用户权限配置已变更，请刷新页面', '-changed-')
     }
-    return Promise.resolve()
+    return Promise.reject(error)
   }
 )
 
@@ -272,6 +323,17 @@ const executeVersionHandler = (response: AxiosResponse) => {
     wsCache.clear()
     wsCache.set(key, executeVersion)
     showMsg('系统有升级，请点击刷新页面', '-sys-upgrade-')
+    /*  ElMessageBox.confirm('系统有升级，请点击刷新页面', {
+      confirmButtonType: 'primary',
+      type: 'warning',
+      confirmButtonText: '刷新',
+      cancelButtonText: '取消',
+      autofocus: false,
+      showClose: false
+    }).then(() => {
+      window.location.reload()
+    }) */
   }
 }
+
 export { service, cancelMap }

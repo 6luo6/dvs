@@ -109,12 +109,13 @@ const dfsSubmit = arr => {
         subTree: { logic, items: subTree }
       })
     } else {
-      const { enumValue, fieldId, filterType, deType, term, value, name } = ele
+      const { enumValue, fieldId, filterType, deType, term, value, name ,field } = ele
       errorDetected({ deType, enumValue, filterType, term, value, name })
       if (fieldId) {
         items.push({
           enumValue: enumValue ? enumValue.split(',') : [],
           fieldId,
+          field,
           filterType,
           term,
           value,

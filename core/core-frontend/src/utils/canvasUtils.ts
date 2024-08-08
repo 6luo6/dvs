@@ -1,4 +1,5 @@
 import { cloneDeep } from 'lodash-es'
+import { ref } from 'vue'
 import componentList, {
   ACTION_SELECTION,
   BASE_CAROUSEL,
@@ -27,7 +28,13 @@ import {
 } from '@/views/chart/components/editor/util/chart'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
 import { deepCopy } from '@/utils/utils'
+import { useI18n } from '@/hooks/web/useI18n'
 import { ElMessage } from 'element-plus-secondary'
+import request from '@/config/axios'
+import { Base64 } from 'js-base64'
+import { getVQueryEnumValue } from '@/hooks/web/useFilter'
+
+const { t } = useI18n()
 const dvMainStore = dvMainStoreWithOut()
 const { curBatchOptComponents, dvInfo, canvasStyleData, componentData, canvasViewInfo, appData } =
   storeToRefs(dvMainStore)
@@ -65,6 +72,10 @@ export function findNewComponent(componentName, innerType, staticMap?) {
         newComponent['commonBackground'] = cloneDeep(COMMON_COMPONENT_BACKGROUND_LIGHT)
       } else {
         newComponent['commonBackground'] = cloneDeep(COMMON_COMPONENT_BACKGROUND_DARK)
+      }
+      if (newComponent.activeChange) {
+        newComponent.activeChange.background = { ...newComponent['commonBackground'] }
+        newComponent.activeChange.style = { ...newComponent['style'] }
       }
     }
   })
@@ -254,19 +265,21 @@ export async function initCanvasData(dvId, busiFlag, callBack) {
     dvId,
     busiFlag,
     function ({ canvasDataResult, canvasStyleResult, dvInfo, canvasViewInfoPreview }) {
-      dvMainStore.setComponentData(canvasDataResult)
-      dvMainStore.setCanvasStyle(canvasStyleResult)
-      dvMainStore.updateCurDvInfo(dvInfo)
-      dvMainStore.setCanvasViewInfo(canvasViewInfoPreview)
-      // 刷新联动信息
-      getPanelAllLinkageInfo(dvInfo.id).then(rsp => {
-        dvMainStore.setNowPanelTrackInfo(rsp.data)
+      getVQueryEnumValue(canvasDataResult).then(() => {
+        dvMainStore.setComponentData(canvasDataResult)
+        dvMainStore.setCanvasStyle(canvasStyleResult)
+        dvMainStore.updateCurDvInfo(dvInfo)
+        dvMainStore.setCanvasViewInfo(canvasViewInfoPreview)
+        // 刷新联动信息
+        getPanelAllLinkageInfo(dvInfo.id).then(rsp => {
+          dvMainStore.setNowPanelTrackInfo(rsp.data)
+        })
+        // 刷新跳转信息
+        queryVisualizationJumpInfo(dvInfo.id).then(rsp => {
+          dvMainStore.setNowPanelJumpInfo(rsp.data)
+        })
+        callBack({ canvasDataResult, canvasStyleResult, dvInfo, canvasViewInfoPreview })
       })
-      // 刷新跳转信息
-      queryVisualizationJumpInfo(dvInfo.id).then(rsp => {
-        dvMainStore.setNowPanelJumpInfo(rsp.data)
-      })
-      callBack({ canvasDataResult, canvasStyleResult, dvInfo, canvasViewInfoPreview })
     }
   )
 }
@@ -644,3 +657,97 @@ export function componentPreSort(componentData) {
     })
   }
 }
+
+/*
+跳转
+*/
+export function useModal() {
+  let closeModal = () => {
+    isShowModal.value = false
+  }
+  const isShowModal = ref(false)
+  const modalSetting = ref({
+    title: '',
+    width: '',
+    height: ''
+  })
+  const modalUrl = ref('')
+  const jumpLink = jumpInfo => {
+    if (!jumpInfo) {
+      return
+    }
+    // 内部仪表板跳转
+    if (jumpInfo.linkType === 'inner') {
+      if (jumpInfo.targetDvId) {
+        const shareUrl = `/share/detail/${jumpInfo.targetDvId}`
+        request.get({ url: shareUrl }).then(res => {
+          if (res.data?.uuid) {
+            const url = `#/de-link/${res.data.uuid}`
+            const currentUrl = window.location.href
+            localStorage.setItem('beforeJumpUrl', currentUrl)
+            windowsJump(url, jumpInfo.jumpType, jumpInfo)
+          } else {
+            const url = `#/preview?dvId=${jumpInfo.targetDvId}`
+            windowsJump(url, jumpInfo.jumpType, jumpInfo)
+          }
+        })
+      } else {
+        ElMessage.warning('未指定跳转仪表板')
+      }
+    } else {
+      let url = setIdValueTrans('id', 'value', jumpInfo.content, [])
+      url = checkAddHttp(url)
+      windowsJump(url, jumpInfo.jumpType, jumpInfo)
+    }
+  }
+  const windowsJump = (url, jumpType, jumpInfo) => {
+    let outJumpParams = {}
+    if (jumpInfo.searchParams?.length) {
+      let queryComponent = componentData.value
+        .filter(item => item.component === 'VQuery')
+        .map(x => x.propValue)
+        .flat(2)
+      queryComponent
+        .filter(x => jumpInfo.searchParams.includes(x.name))
+        .forEach(item => {
+          outJumpParams[item.name] = item.selectValue
+        })
+      let str = encodeURIComponent(Base64.encode(JSON.stringify(outJumpParams)))
+      if (url.includes('?')) {
+        url += `&attachParams=${str}`
+      } else {
+        url += `?attachParams=${str}`
+      }
+    }
+    //弹框
+    if (jumpType == 'modal') {
+      //内部跳转 && 宽度自适应
+      if (jumpInfo.linkType == 'inner' && jumpInfo.targetDvId && modalSetting.value.isBodyFit) {
+        findById(jumpInfo.targetDvId, dvInfo.value.type).then(res => {
+          let canvasStyleData = JSON.parse(res.data.canvasStyleData)
+          modalSetting.value.title = modalSetting.value.title || res.data.name
+          if (modalSetting.value.isBodyFit) {
+            modalSetting.value.width = canvasStyleData.width + 'px'
+            modalSetting.value.height = canvasStyleData.height + 'px'
+          }
+          isShowModal.value = true
+          modalUrl.value = (location.origin + location.pathname).replace('mobile.html', '') + url
+        })
+      } else {
+        isShowModal.value = true
+        modalUrl.value = (location.origin + location.pathname).replace('mobile.html', '') + url
+      }
+      return
+    }
+    try {
+      window.open(url, jumpType)
+      if (jumpType === '_self') {
+        location.reload()
+      }
+    } catch (e) {
+      ElMessage.error(t('visualization.url_check_error') + ':' + url)
+    }
+  }
+  return { closeModal, isShowModal, modalUrl, modalSetting, jumpLink, windowsJump }
+}
+

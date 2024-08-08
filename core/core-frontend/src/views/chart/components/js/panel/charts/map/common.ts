@@ -12,7 +12,7 @@ export const MAP_EDITOR_PROPERTY: EditorProperty[] = [
 
 export const MAP_EDITOR_PROPERTY_INNER: EditorPropertyInner = {
   'background-overall-component': ['all'],
-  'basic-style-selector': ['colors', 'alpha', 'areaBorderColor', 'zoom'],
+  'basic-style-selector': ['colors', 'alpha', 'areaBorderColor', 'zoom', 'mapColorField'],
   'title-selector': [
     'title',
     'fontSize',

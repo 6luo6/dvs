@@ -5,6 +5,8 @@
       v-if="propValue['url']"
       :style="imageAdapter"
       :src="imgUrlTrans(propValue['url'])"
+      :class="{ jump_hover: props.element.jumpActive }"
+      @click="jumpClick"
     />
     <div v-else class="pic-upload">
       <span
@@ -40,7 +42,7 @@ const props = defineProps({
 })
 
 const { propValue, element } = toRefs(props)
-
+const emit = defineEmits(['jumpClick'])
 const imageAdapter = computed(() => {
   const style = {
     position: 'relative',
@@ -70,6 +72,9 @@ const uploadImg = () => {
     eventBus.emit('uploadImg')
   })
 }
+function jumpClick() {
+  emit('jumpClick', props.element)
+}
 </script>
 
 <style lang="less" scoped>
@@ -86,5 +91,8 @@ const uploadImg = () => {
   color: #5370af;
   align-items: center;
   justify-content: center;
+}
+.jump_hover{
+  cursor: pointer;
 }
 </style>
