@@ -4,6 +4,7 @@ import { propTypes } from '@/utils/propTypes'
 
 import dvs from '@/assets/svg/dvs.svg'
 import _401 from '@/assets/svg/401.svg'
+import calculate from '@/assets/svg/calculate.svg'
 import _403 from '@/assets/svg/403.svg'
 import APIDs from '@/assets/svg/API-ds.svg'
 import Apache_Hive from '@/assets/svg/Apache Hive.svg'
@@ -219,6 +220,8 @@ import editIn from '@/assets/svg/edit-in.svg'
 import edit from '@/assets/svg/edit.svg'
 import emailTask from '@/assets/svg/email-task.svg'
 import embedded from '@/assets/svg/embedded.svg'
+import association from '@/assets/svg/association.svg'
+import threshold from '@/assets/svg/threshold.svg'
 import example from '@/assets/svg/example.svg'
 import exclamationmark from '@/assets/svg/exclamationmark.svg'
 import exclamationmark2 from '@/assets/svg/exclamationmark2.svg'
@@ -662,6 +665,12 @@ import wizard_quick_start from '@/assets/svg/wizard_quick_start.svg'
 import wordCloudDark from '@/assets/svg/word-cloud-dark.svg'
 import wordCloudOrigin from '@/assets/svg/word-cloud-origin.svg'
 import wordCloud from '@/assets/svg/word-cloud.svg'
+import icon_multi_line_outlined from '@/assets/svg/icon_multi-line_outlined.svg'
+import icon_radio_outlined from '@/assets/svg/icon_radio_outlined.svg'
+import icon_single_line_outlined from '@/assets/svg/icon_single-line_outlined.svg'
+import icon_todo_outlined from '@/assets/svg/icon_todo_outlined.svg'
+import icon_file_doc_colorful from '@/assets/svg/icon_file-doc_colorful.svg'
+import icon_font from '@/assets/svg/icon_font.svg'
 const iconMap = {
   dvs: dvs,
   '401': _401,
@@ -880,6 +889,8 @@ const iconMap = {
   edit: edit,
   'email-task': emailTask,
   embedded: embedded,
+  association: association,
+  threshold: threshold,
   example: example,
   exclamationmark: exclamationmark,
   exclamationmark2: exclamationmark2,
@@ -1322,7 +1333,10 @@ const iconMap = {
   wizard_quick_start: wizard_quick_start,
   'word-cloud-dark': wordCloudDark,
   'word-cloud-origin': wordCloudOrigin,
-  'word-cloud': wordCloud
+  'word-cloud': wordCloud,
+  calculate,
+  'icon_file-doc_colorful': icon_file_doc_colorful,
+  icon_font
 }
 
 const props = defineProps({
