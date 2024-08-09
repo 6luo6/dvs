@@ -84,6 +84,9 @@ export const DEFAULT_CANVAS_STYLE_DATA_BASE = {
   refreshViewLoading: true, // 仪表板图表loading提示
   refreshUnit: 'minute', // 仪表板刷新时间带外 默认 分钟
   refreshTime: 5, // 仪表板刷新时间 默认5分钟
+  cacheViewEnable: false, // 是否开启缓存
+  cacheUnit: 'hour', // 缓存时间单位 默认 小时
+  cacheTime: 8, // 缓存时间 默认8小时
   scale: 60,
   scaleWidth: 100,
   scaleHeight: 100,

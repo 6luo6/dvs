@@ -9,8 +9,10 @@ import type {
   Style,
   S2Options,
   Meta,
-  SERIES_NUMBER_FIELD,
   setTooltipContainerStyle
+} from '@antv/s2'
+import {
+  SERIES_NUMBER_FIELD,
 } from '@antv/s2'
 import {
   configHeaderInteraction,

@@ -2644,7 +2644,7 @@ const deleteChartFieldItem = id => {
                       </el-row>
                     </template>
                   </el-scrollbar>
-                  <el-footer :class="{ 'refresh-active-footer': view.refreshViewEnable }">
+                  <el-footer :class="{ 'refresh-active-footer': view.refreshViewEnable,'cache-active-footer': view.cacheViewEnable }">
                     <el-row class="refresh-area">
                       <el-form-item
                         class="form-item no-margin-bottom"
@@ -2692,6 +2692,108 @@ const deleteChartFieldItem = id => {
                                   :effect="themes"
                                   :label="t('visualization.second')"
                                   :value="'second'"
+                                />
+                              </el-select>
+                            </template>
+                          </el-input>
+                        </el-form-item>
+                      </el-row>
+                    </el-row>
+                    <el-row class="result-style" :class="'result-style-' + themes">
+                      <div class="result-style-input">
+                        <span v-if="view.type !== 'richTextView'">
+                          {{ t('chart.result_count') }}
+                        </span>
+                        <span v-if="view.type !== 'richTextView'">
+                          <el-radio-group
+                            v-model="view.resultMode"
+                            :effect="themes"
+                            class="radio-span"
+                            size="small"
+                            @change="recordSnapshotInfo('render')"
+                          >
+                            <el-radio label="all" :effect="themes">
+                              <span class="result-count-label" :class="{ dark: themes === 'dark' }">
+                                {{ t('chart.result_mode_all') }}
+                              </span>
+                            </el-radio>
+                            <el-radio label="custom">
+                              <el-input-number
+                                v-model="view.resultCount"
+                                :min="1"
+                                :max="1000000"
+                                :controls="false"
+                                :effect="themes"
+                                :step-strictly="true"
+                                :value-on-clear="1000"
+                                :disabled="view.resultMode === 'all'"
+                                class="result-count"
+                                size="small"
+                                @change="recordSnapshotInfo('calcData')"
+                              />
+                            </el-radio>
+                          </el-radio-group>
+                        </span>
+                      </div>
+
+                      <el-button
+                        :disabled="disableUpdate"
+                        type="primary"
+                        class="result-style-button"
+                        @click="updateChartData(view)"
+                      >
+                        <span style="font-size: 12px">
+                          {{ t('chart.update_chart_data') }}
+                        </span>
+                      </el-button>
+                    </el-row>
+                    <el-row class="refresh-area">
+                      <el-form-item
+                        class="form-item no-margin-bottom"
+                        :class="'form-item-' + themes"
+                      >
+                        <el-checkbox
+                          v-model="view.cacheViewEnable"
+                          :effect="themes"
+                          size="small"
+                          @change="recordSnapshotInfo('render')"
+                        >
+                        是否启用缓存
+                        </el-checkbox>
+                      </el-form-item>
+                      <el-row v-if="view.cacheViewEnable">
+                        <el-form-item
+                          class="form-item no-margin-bottom select-append"
+                          :class="'form-item-' + themes"
+                        >
+                          <el-input
+                            v-model.number="view.cacheTime"
+                            :effect="themes"
+                            :class="[themes === 'dark' && 'dv-dark']"
+                            size="small"
+                            :min="1"
+                            :max="3600"
+                            :disabled="!view.cacheViewEnable"
+                            @change="onRefreshChange"
+                          >
+                            <template #append>
+                              <el-select
+                                v-model="view.cacheUnit"
+                                :effect="themes"
+                                size="small"
+                                placeholder="Select"
+                                style="width: 80px"
+                                @change="recordSnapshotInfo('render')"
+                              >
+                                <el-option
+                                  :effect="themes"
+                                  label="时"
+                                  :value="'hour'"
+                                />
+                                <el-option
+                                  :effect="themes"
+                                  label="分"
+                                  :value="'minute'"
                                 />
                               </el-select>
                             </template>
@@ -3960,7 +4062,7 @@ span {
 
     :deep(.ed-footer) {
       padding: 0;
-      height: 114px;
+      height: 144px;
     }
   }
 
@@ -4580,9 +4682,11 @@ span {
 }
 
 .refresh-active-footer {
-  height: 150px !important;
+  height: 180px !important;
 }
-
+.cache-active-footer {
+  height: 214px !important;
+}
 .refresh-area {
   width: 100%;
   padding: 0 8px;

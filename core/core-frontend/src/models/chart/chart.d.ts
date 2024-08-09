@@ -11,6 +11,9 @@ declare interface Chart {
   refreshViewEnable: boolean
   refreshTime: number
   refreshUnit: string
+  cacheViewEnable: boolean
+  cacheUnit: string
+  cacheTime: number
   data: {
     data: any[]
     series?: any[]

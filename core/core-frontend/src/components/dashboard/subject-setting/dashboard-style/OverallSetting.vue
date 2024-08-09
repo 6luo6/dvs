@@ -72,6 +72,44 @@
         </template>
       </el-input>
     </el-form-item>
+    <el-form-item class="form-item" :class="'form-item-' + themes" style="margin-bottom: 8px">
+      <el-checkbox
+        :effect="themes"
+        size="small"
+        v-model="canvasStyleData.cacheViewEnable"
+        @change="themeChange"
+      >
+      是否启用缓存
+      </el-checkbox>
+    </el-form-item>
+    <el-form-item class="form-item" :class="'form-item-' + themes" style="padding-left: 20px">
+      <el-input
+        v-model="canvasStyleData.cacheTime"
+        :effect="themes"
+        class="time-input-number"
+        :class="[dvInfo.type === 'dashboard' && 'padding20', themes === 'dark' && 'dv-dark']"
+        type="number"
+        :min="1"
+        :max="3600"
+        size="middle"
+        :disabled="!canvasStyleData.cacheViewEnable"
+        @change="themeChange"
+      >
+        <template #append>
+          <el-select
+            v-model="canvasStyleData.cacheUnit"
+            size="middle"
+            :effect="themes"
+            :disabled="!canvasStyleData.cacheViewEnable"
+            style="width: 90px"
+            @change="themeChange"
+          >
+            <el-option label="时" :value="'hour'" />
+            <el-option label="分" :value="'minute'" />
+          </el-select>
+        </template>
+      </el-input>
+    </el-form-item>
     <el-form-item class="form-item" :class="'form-item-' + themes">
       <el-checkbox
         :effect="themes"

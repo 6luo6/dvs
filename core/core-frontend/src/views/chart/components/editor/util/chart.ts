@@ -1589,6 +1589,9 @@ export const BASE_VIEW_CONFIG = {
   refreshViewEnable: false,
   refreshTime: 5,
   refreshUnit: 'minute',
+  cacheViewEnable: false, // 是否开启缓存
+  cacheUnit: 'hour', // 缓存时间单位 默认 小时
+  cacheTime: 8, // 缓存时间 默认8小时
   xAxis: [],
   xAxisExt: [],
   yAxis: [],
