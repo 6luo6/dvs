@@ -176,6 +176,7 @@ useEmitt({
   }
 })
 
+let isFirst =true
 const resetLayout = () => {
   if (downloadStatus.value) {
     return
