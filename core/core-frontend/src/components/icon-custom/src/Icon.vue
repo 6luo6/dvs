@@ -4,6 +4,7 @@ import { propTypes } from '@/utils/propTypes'
 
 import dvs from '@/assets/svg/dvs.svg'
 import _401 from '@/assets/svg/401.svg'
+import icon_notification_filled from '@/assets/svg/icon_notification_filled.svg'
 import calculate from '@/assets/svg/calculate.svg'
 import _403 from '@/assets/svg/403.svg'
 import APIDs from '@/assets/svg/API-ds.svg'
@@ -674,6 +675,7 @@ import icon_font from '@/assets/svg/icon_font.svg'
 const iconMap = {
   dvs: dvs,
   '401': _401,
+  icon_notification_filled,
   '403': _403,
   'API-ds': APIDs,
   'Apache Hive': Apache_Hive,

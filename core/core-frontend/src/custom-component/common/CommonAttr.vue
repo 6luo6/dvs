@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref, toRefs } from 'vue'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { storeToRefs } from 'pinia'
-import { styleData, selectKey, optionMap, horizontalPosition } from '@/utils/attr'
+import { styleData } from '@/utils/attr'
 import ComponentPosition from '@/components/visualization/common/ComponentPosition.vue'
 import BackgroundOverallCommon from '@/components/visualization/component-background/BackgroundOverallCommon.vue'
 import { useI18n } from '@/hooks/web/useI18n'
@@ -13,6 +13,7 @@ import CommonEvent from '@/custom-component/common/CommonEvent.vue'
 import CommonLinkJumpSet from '@/components/visualization/CommonLinkJumpSet.vue'
 import { ElIcon, ElMessage } from 'element-plus-secondary'
 import { canvasSave } from '@/utils/canvasUtils'
+import TabCarouselSetting from '@/custom-component/common/TabCarouselSetting.vue'
 const snapshotStore = snapshotStoreWithOut()
 
 const { t } = useI18n()
@@ -108,6 +109,10 @@ const eventsShow = computed(() => {
       element.value.component
     ) || element.value.innerType === 'rich-text'
   )
+})
+
+const carouselShow = computed(() => {
+  return element.value.component === 'DeTabs' && element.value.carousel
 })
 
 const backgroundCustomShow = computed(() => {
@@ -286,6 +291,11 @@ const isDisabled = id => {
           </span>
         </div>
       </collapse-switch-item>
+      <TabCarouselSetting
+        v-if="carouselShow"
+        :element="element"
+        :themes="themes"
+      ></TabCarouselSetting>
     </el-collapse>
 <!--跳转设置-->
     <CommonLinkJumpSet ref="linkJumpRef" />

@@ -817,6 +817,11 @@ declare interface ChartLabelAttr {
    * 显示极值
    */
   showExtremum?: boolean
+
+  /**
+   * 转化率标签
+   */
+  conversionTag: ConversionTagAtt
 }
 /**
  * 提示设置
@@ -862,6 +867,11 @@ declare interface ChartTooltipAttr {
    * 自定义显示内容
    */
   customContent?: string
+
+  /**
+   * 轮播设置
+   */
+  carousel: CarouselAttr
 }
 
 /**
@@ -1060,4 +1070,37 @@ declare interface ChartIndicatorNameStyle {
    * 指标/名称间距
    */
   nameValueSpacing: number
+}
+
+/**
+ * 轮播属性
+ */
+declare interface CarouselAttr {
+  /**
+   * 是否启用
+   */
+  enable: boolean
+  /**
+   * 停留时间 秒
+   */
+  stayTime: number
+  /**
+   * 轮播间隔时间 秒
+   */
+  intervalTime: number
+}
+
+declare interface ConversionTagAtt {
+  /**
+   * 是否显示
+   */
+  show: boolean
+  /**
+   * 文本
+   */
+  text: string
+  /**
+   * 精度
+   */
+  precision: number
 }

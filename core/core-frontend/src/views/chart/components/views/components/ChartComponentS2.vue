@@ -136,7 +136,7 @@ const calcData = (view: Chart, callback, resetPageInfo = true) => {
         } else {
           chartData.value = res?.data as Partial<Chart['data']>
           state.totalItems = res?.totalItems
-          dvMainStore.setViewDataDetails(view.id, chartData.value)
+          dvMainStore.setViewDataDetails(view.id, res)
           emit('onDrillFilters', res?.drillFilters)
           renderChart(res as unknown as Chart, resetPageInfo)
         }
@@ -561,10 +561,14 @@ onMounted(() => {
   resizeObserver.observe(document.getElementById(containerId))
 })
 onBeforeUnmount(() => {
-  myChart?.facet.timer?.stop()
-  myChart?.destroy()
-  myChart = null
-  resizeObserver?.disconnect()
+  try {
+    myChart?.facet.timer?.stop()
+    myChart?.destroy()
+    myChart = null
+    resizeObserver?.disconnect()
+  } catch (e) {
+    console.log(e)
+  }
 })
 
 const autoStyle = computed(() => {

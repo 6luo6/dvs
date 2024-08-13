@@ -10,16 +10,17 @@ import elementResizeDetectorMaker from 'element-resize-detector'
 import UserViewEnlarge from '@/components/visualization/UserViewEnlarge.vue'
 import CanvasOptBar from '@/components/visualization/CanvasOptBar.vue'
 import { isDashboard, isMainCanvas, refreshOtherComponent } from '@/utils/canvasUtils'
-import { activeWatermark } from '@/components/watermark/watermark'
-import { personInfoApi } from '@/api/user'
+import { activeWatermarkCheckUser } from '@/components/watermark/watermark'
 import router from '@/router'
 import { XpackComponent } from '@/components/plugin'
 import PopArea from '@/custom-component/pop-area/Component.vue'
 import CanvasFilterBtn from '@/custom-component/canvas-filter-btn/Component.vue'
 import { useEmitt } from '@/hooks/web/useEmitt'
+import DatasetParamsComponent from '@/components/visualization/DatasetParamsComponent.vue'
 const dvMainStore = dvMainStoreWithOut()
 const { pcMatrixCount, curComponent, mobileInPc, canvasState } = storeToRefs(dvMainStore)
 const openHandler = ref(null)
+const customDatasetParamsRef = ref(null)
 
 const props = defineProps({
   canvasStyleData: {
@@ -263,31 +264,7 @@ const initRefreshTimer = () => {
 
 const initWatermark = (waterDomId = 'preview-canvas-main') => {
   if (dvInfo.value.watermarkInfo && isMainCanvas(canvasId.value)) {
-    if (userInfo.value && userInfo.value.model !== 'lose') {
-      activeWatermark(
-        dvInfo.value.watermarkInfo.settingContent,
-        userInfo.value,
-        waterDomId,
-        canvasId.value,
-        dvInfo.value.selfWatermarkStatus,
-        scaleMin.value / 100
-      )
-    } else {
-      const method = personInfoApi
-      method().then(res => {
-        userInfo.value = res.data
-        if (userInfo.value && userInfo.value.model !== 'lose') {
-          activeWatermark(
-            dvInfo.value.watermarkInfo.settingContent,
-            userInfo.value,
-            waterDomId,
-            canvasId.value,
-            dvInfo.value.selfWatermarkStatus,
-            scaleMin.value / 100
-          )
-        }
-      })
-    }
+    activeWatermarkCheckUser(waterDomId, canvasId.value, scaleMin.value / 100)
   }
 }
 
@@ -331,7 +308,8 @@ const userViewEnlargeOpen = (opt, item) => {
     canvasStyleData.value,
     canvasViewInfo.value[item.id],
     item,
-    opt
+    opt,
+    { scale: scaleMin.value / 100 }
   )
 }
 const handleMouseDown = () => {
@@ -375,6 +353,9 @@ const popAreaAvailable = computed(
 const filterBtnShow = computed(
   () => popAreaAvailable.value && popComponentData.value && popComponentData.value.length > 0
 )
+const datasetParamsInit = item => {
+  customDatasetParamsRef.value?.optInit(item)
+}
 
 const isShow = item => {
   if (!item.isShow) {
@@ -438,10 +419,12 @@ defineExpose({
       :scale="mobileInPc ? 100 : scaleMin"
       :is-selector="props.isSelector"
       @userViewEnlargeOpen="userViewEnlargeOpen($event, item)"
+      @datasetParamsInit="datasetParamsInit(item)"
       @onPointClick="onPointClick"
     />
     <user-view-enlarge ref="userViewEnlargeRef"></user-view-enlarge>
   </div>
+  <dataset-params-component ref="customDatasetParamsRef"></dataset-params-component>
   <XpackComponent ref="openHandler" jsname="L2NvbXBvbmVudC9lbWJlZGRlZC1pZnJhbWUvT3BlbkhhbmRsZXI=" />
 </template>
 

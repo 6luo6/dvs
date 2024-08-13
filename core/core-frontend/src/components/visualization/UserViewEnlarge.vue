@@ -115,7 +115,7 @@
 
 <script setup lang="ts">
 import ComponentWrapper from '@/components/data-visualization/canvas/ComponentWrapper.vue'
-import { computed, h, nextTick, ref } from 'vue'
+import { computed, h, nextTick, reactive, ref } from 'vue'
 import { toPng } from 'html-to-image'
 import { useI18n } from '@/hooks/web/useI18n'
 import { deepCopy } from '@/utils/utils'
@@ -128,6 +128,9 @@ import { assign } from 'lodash-es'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import { ElMessage, ElButton } from 'element-plus-secondary'
 import { exportPivotExcel } from '@/views/chart/components/js/panel/common/common_table'
+import { useRequestStoreWithOut } from '@/store/modules/request'
+import { usePermissionStoreWithOut } from '@/store/modules/permission'
+import { activeWatermarkCheckUser } from '@/components/watermark/watermark'
 const downLoading = ref(false)
 const dvMainStore = dvMainStoreWithOut()
 const dialogShow = ref(false)
@@ -170,6 +173,10 @@ const DETAIL_CHART_ATTR: DeepPartial<ChartObj> = {
     }
   }
 }
+
+const state = reactive({
+  scale: 0.5
+})
 const DETAIL_TABLE_ATTR: DeepPartial<ChartObj> = {
   senior: {
     scrollCfg: {
@@ -230,7 +237,8 @@ const pixelOptions = [
     ]
   }
 ]
-const dialogInit = (canvasStyle, view, item, opt) => {
+const dialogInit = (canvasStyle, view, item, opt, params = { scale: 0.5 }) => {
+  state.scale = params.scale
   sourceViewType.value = view.type
   optType.value = opt
   dialogShow.value = true
@@ -353,6 +361,10 @@ const htmlToImage = () => {
         console.error('oops, something went wrong!', error)
       })
   }, 500)
+}
+
+const initWatermark = () => {
+  activeWatermarkCheckUser('enlarge-inner-content', 'canvas-main', state.scale)
 }
 
 defineExpose({

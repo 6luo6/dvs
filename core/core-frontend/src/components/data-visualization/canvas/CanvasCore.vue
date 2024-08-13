@@ -43,10 +43,9 @@ import { adaptCurThemeCommonStyle } from '@/utils/canvasStyle'
 import LinkageSet from '@/components/visualization/LinkageSet.vue'
 import PointShadow from '@/components/data-visualization/canvas/PointShadow.vue'
 import DragInfo from '@/components/visualization/common/DragInfo.vue'
-import { activeWatermark } from '@/components/watermark/watermark'
-import { personInfoApi } from '@/api/user'
+import { activeWatermarkCheckUser } from '@/components/watermark/watermark'
 import PopArea from '@/custom-component/pop-area/Component.vue'
-import ComponentHangPopver from '@/custom-component/independent-hang/ComponentHangPopver.vue'
+import DatasetParamsComponent from '@/components/visualization/DatasetParamsComponent.vue'
 
 const snapshotStore = snapshotStoreWithOut()
 const dvMainStore = dvMainStoreWithOut()
@@ -211,6 +210,7 @@ const isShowArea = ref(false)
 const svgFilterAttrs = ['width', 'height', 'top', 'left', 'rotate', 'backgroundColor']
 const commonFilterAttrs = ['width', 'height', 'top', 'left', 'rotate']
 const userViewEnlargeRef = ref(null)
+const customDatasetParamsRef = ref(null)
 const linkJumpRef = ref(null)
 const linkageRef = ref(null)
 const mainDomId = ref('editor-' + canvasId.value)
@@ -247,32 +247,7 @@ const initWatermark = (waterDomId = 'editor-canvas-main') => {
       dvInfo.value.watermarkInfo.settingContent &&
       isMainCanvas(canvasId.value)
     ) {
-      const scale = dashboardActive.value ? 1 : curScale.value
-      if (userInfo.value && userInfo.value.model !== 'lose') {
-        activeWatermark(
-          dvInfo.value.watermarkInfo.settingContent,
-          userInfo.value,
-          waterDomId,
-          canvasId.value,
-          dvInfo.value.selfWatermarkStatus,
-          scale
-        )
-      } else {
-        const method = personInfoApi
-        method().then(res => {
-          userInfo.value = res.data
-          if (userInfo.value && userInfo.value.model !== 'lose') {
-            activeWatermark(
-              dvInfo.value.watermarkInfo.settingContent,
-              userInfo.value,
-              waterDomId,
-              canvasId.value,
-              dvInfo.value.selfWatermarkStatus,
-              scale
-            )
-          }
-        })
-      }
+      activeWatermarkCheckUser(waterDomId, canvasId.value, curScale.value)
     }
   } catch (e) {
     console.warn('Watermarks are not supported!')
@@ -1362,8 +1337,13 @@ const userViewEnlargeOpen = (opt, item) => {
     canvasStyleData.value,
     canvasViewInfo.value[item.id],
     item,
-    opt
+    opt,
+    { scale: curBaseScale.value }
   )
+}
+
+const datasetParamsInit = item => {
+  customDatasetParamsRef.value?.optInit(item)
 }
 
 const initSnapshotTimer = () => {
@@ -1578,6 +1558,7 @@ defineExpose({
       @onDragging="onDragging($event, item, index)"
       @onResizing="onResizing($event, item, index)"
       @userViewEnlargeOpen="userViewEnlargeOpen($event, item)"
+      @datasetParamsInit="datasetParamsInit(item)"
       @linkJumpSetOpen="linkJumpSetOpen(item)"
       @linkageSetOpen="linkageSetOpen(item)"
     >
@@ -1702,6 +1683,7 @@ defineExpose({
         </div>
       </el-dialog>
     </Teleport>
+    <dataset-params-component ref="customDatasetParamsRef"></dataset-params-component>
   </div>
 </template>
 
