@@ -1,15 +1,24 @@
 <script lang="ts" setup>
+import noJoin from '@/assets/svg/no-join.svg'
+import icon_fullAssociation from '@/assets/svg/icon_full-association.svg'
+import icon_intersect from '@/assets/svg/icon_intersect.svg'
+import icon_leftAssociation from '@/assets/svg/icon_left-association.svg'
+import icon_rightAssociation from '@/assets/svg/icon_right-association.svg'
+import icon_add_outlined from '@/assets/svg/icon_add_outlined.svg'
+import joinJoin from '@/assets/svg/join-join.svg'
+import icon_deleteTrash_outlined from '@/assets/svg/icon_delete-trash_outlined.svg'
 import { PropType, ref } from 'vue'
 import { useI18n } from '@/hooks/web/useI18n'
 import type { Field } from '@/api/chart'
 import { fieldType } from '@/utils/attr'
+import { iconFieldMap } from '@/components/icon-group/field-list'
 const unionTypeFromParent = ref('left')
 const { t } = useI18n()
 const iconName = {
-  left: 'icon_left-association',
-  right: 'icon_right-association',
-  inner: 'icon_intersect',
-  full: 'icon_full-association'
+  left: icon_leftAssociation,
+  right: icon_rightAssociation,
+  inner: icon_intersect,
+  full: icon_fullAssociation
 }
 const props = defineProps({
   tableName: {
@@ -66,7 +75,12 @@ init()
         >
           <template #prefix>
             <el-icon>
-              <Icon :name="`${iconName[unionTypeFromParent] || 'no-join'}`"></Icon>
+              <Icon
+                ><component
+                  class="svg-icon"
+                  :is="iconName[unionTypeFromParent] || noJoin"
+                ></component
+              ></Icon>
             </el-icon>
           </template>
           <el-option
@@ -79,7 +93,7 @@ init()
         <el-button type="primary" class="union-add" @click="addUnion">
           <template #icon>
             <el-icon>
-              <Icon name="icon_add_outlined"></Icon>
+              <Icon name="icon_add_outlined"><icon_add_outlined class="svg-icon" /></Icon>
             </el-icon>
           </template>
           {{ t('dataset.add_union_field') }}
@@ -111,8 +125,11 @@ init()
               >
                 <el-icon>
                   <Icon
-                    :name="`field_${fieldType[item.deType]}`"
-                    :className="`field-icon-${fieldType[item.deType]}`"
+                    ><component
+                      class="svg-icon"
+                      :class="`field-icon-${fieldType[item.deType]}`"
+                      :is="iconFieldMap[fieldType[item.deType]]"
+                    ></component
                   ></Icon>
                 </el-icon>
                 <span>
@@ -122,7 +139,7 @@ init()
             </el-select>
           </span>
           <el-icon>
-            <Icon name="join-join"></Icon>
+            <Icon name="join-join"><joinJoin class="svg-icon" /></Icon>
           </el-icon>
           <!--右侧孩子field-->
           <span class="column">
@@ -142,8 +159,11 @@ init()
               >
                 <el-icon>
                   <Icon
-                    :name="`field_${fieldType[item.deType]}`"
-                    :className="`field-icon-${fieldType[item.deType]}`"
+                    ><component
+                      class="svg-icon"
+                      :class="`field-icon-${fieldType[item.deType]}`"
+                      :is="iconFieldMap[fieldType[item.deType]]"
+                    ></component
                   ></Icon>
                 </el-icon>
                 <span>
@@ -160,7 +180,9 @@ init()
               @click="removeUnionItem(index)"
             >
               <template #icon>
-                <Icon name="icon_delete-trash_outlined"></Icon>
+                <Icon name="icon_delete-trash_outlined"
+                  ><icon_deleteTrash_outlined class="svg-icon"
+                /></Icon>
               </template>
             </el-button>
           </span>
@@ -173,7 +195,7 @@ init()
 <style lang="less" scoped>
 .union-container {
   height: 275px;
-  font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+  font-family: var(--de-custom_font, 'PingFang');
 }
 .union-header {
   display: flex;
@@ -219,7 +241,7 @@ init()
   display: flex;
   align-items: center;
   font-size: 14px;
-  font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+  font-family: var(--de-custom_font, 'PingFang');
   font-style: normal;
   font-weight: 400;
   margin: 20px 0 8px 0;

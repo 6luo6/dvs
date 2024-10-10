@@ -31,6 +31,10 @@ const DEFAULT_DATA = []
 export class HorizontalBar extends G2PlotChartView<BarOptions, Bar> {
   axisConfig = {
     ...this['axisConfig'],
+    xAxis: {
+      name: `${t('chart.drag_block_type_axis')} / ${t('chart.dimension')}`,
+      type: 'd'
+    },
     yAxis: {
       name: `${t('chart.drag_block_value_axis')} / ${t('chart.quota')}`,
       type: 'q'
@@ -301,6 +305,14 @@ export class HorizontalBar extends G2PlotChartView<BarOptions, Bar> {
  * 堆叠条形图
  */
 export class HorizontalStackBar extends HorizontalBar {
+  axisConfig = {
+    ...this['axisConfig'],
+    extStack: {
+      name: `${t('chart.stack_item')} / ${t('chart.dimension')}`,
+      type: 'd',
+      limit: 1
+    }
+  }
   propertyInner = {
     ...this['propertyInner'],
     'label-selector': ['color', 'fontSize', 'hPosition', 'labelFormatter'],
@@ -352,6 +364,39 @@ export class HorizontalStackBar extends HorizontalBar {
   public setupSeriesColor(chart: ChartObj, data?: any[]): ChartBasicStyle['seriesColor'] {
     return setUpStackSeriesColor(chart, data)
   }
+
+  protected configData(chart: Chart, options: BarOptions): BarOptions {
+    const { xAxis, extStack, yAxis } = chart
+    const mainSort = xAxis.some(axis => axis.sort !== 'none')
+    const subSort = extStack.some(axis => axis.sort !== 'none')
+    if (mainSort || subSort) {
+      return options
+    }
+    const quotaSort = yAxis?.[0]?.sort !== 'none'
+    if (!quotaSort || !extStack.length || !yAxis.length) {
+      return options
+    }
+    const { data } = options
+    const mainAxisValueMap = data.reduce((p, n) => {
+      p[n.field] = p[n.field] ? p[n.field] + n.value : n.value || 0
+      return p
+    }, {})
+    const sort = yAxis[0].sort
+    data.sort((p, n) => {
+      if (sort === 'asc') {
+        return mainAxisValueMap[p.field] - mainAxisValueMap[n.field]
+      } else {
+        return mainAxisValueMap[n.field] - mainAxisValueMap[p.field]
+      }
+    })
+    return options
+  }
+
+  protected setupOptions(chart: Chart, options: BarOptions): BarOptions {
+    const tmp = super.setupOptions(chart, options)
+    return flow(this.configData)(chart, tmp, {}, this)
+  }
+
   constructor(name = 'bar-stack-horizontal') {
     super(name)
     this.baseOptions = {

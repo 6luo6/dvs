@@ -6,7 +6,7 @@ import {
   L7Wrapper
 } from '@/views/chart/components/js/panel/types/impl/l7'
 import { MAP_EDITOR_PROPERTY_INNER } from '@/views/chart/components/js/panel/charts/map/common'
-import { flow, hexColorToRGBA, parseJson } from '@/views/chart/components/js/util'
+import { hexColorToRGBA, parseJson } from '@/views/chart/components/js/util'
 import { deepCopy } from '@/utils/utils'
 import { GaodeMap } from '@antv/l7-maps'
 import { Scene } from '@antv/l7-scene'
@@ -22,6 +22,7 @@ const { t } = useI18n()
 export class SymbolicMap extends L7ChartView<Scene, L7Config> {
   properties: EditorProperty[] = [
     'background-overall-component',
+    'border-style',
     'basic-style-selector',
     'title-selector',
     'label-selector',
@@ -51,13 +52,16 @@ export class SymbolicMap extends L7ChartView<Scene, L7Config> {
     xAxisExt: {
       name: `颜色 / ${t('chart.dimension')}`,
       type: 'd',
-      limit: 1
+      limit: 1,
+      allowEmpty: true
     },
     extBubble: {
       name: `${t('chart.bubble_size')} / ${t('chart.quota')}`,
       type: 'q',
       limit: 1,
-      tooltip: '该指标生效时，样式基础样式中的大小属性将失效'
+      tooltip:
+        '该指标生效时，样式基础样式中的大小属性将失效，同时可在样式基础样式中的大小区间配置大小区间',
+      allowEmpty: true
     }
   }
   constructor() {
@@ -157,8 +161,16 @@ export class SymbolicMap extends L7ChartView<Scene, L7Config> {
     const xAxis = deepCopy(chart.xAxis)
     const xAxisExt = deepCopy(chart.xAxisExt)
     const extBubble = deepCopy(chart.extBubble)
-    const { mapSymbolOpacity, mapSymbolSize, mapSymbol, mapSymbolStrokeWidth, colors, alpha } =
-      deepCopy(basicStyle)
+    const {
+      mapSymbolOpacity,
+      mapSymbolSize,
+      mapSymbol,
+      mapSymbolStrokeWidth,
+      colors,
+      alpha,
+      mapSymbolSizeMin,
+      mapSymbolSizeMax
+    } = deepCopy(basicStyle)
     const colorsWithAlpha = colors.map(color => hexColorToRGBA(color, alpha))
     let colorIndex = 0
     // 存储已分配的颜色
@@ -178,7 +190,7 @@ export class SymbolicMap extends L7ChartView<Scene, L7Config> {
           return {
             ...item,
             color,
-            size: item[sizeKey] ?? mapSymbolSize,
+            size: parseInt(item[sizeKey]) ?? mapSymbolSize,
             name: identifier
           }
         })
@@ -211,7 +223,7 @@ export class SymbolicMap extends L7ChartView<Scene, L7Config> {
       })
     }
     if (sizeKey) {
-      pointLayer.size('size', [4, 30])
+      pointLayer.size('size', [mapSymbolSizeMin, mapSymbolSizeMax])
     } else {
       pointLayer.size(mapSymbolSize)
     }
@@ -306,7 +318,7 @@ export class SymbolicMap extends L7ChartView<Scene, L7Config> {
    * @returns {string}
    */
   buildTooltipContent = (tooltip, fieldData, showFields) => {
-    let content = ''
+    let content = ``
     if (tooltip.customContent) {
       content = tooltip.customContent
       showFields.forEach(field => {
@@ -319,7 +331,7 @@ export class SymbolicMap extends L7ChartView<Scene, L7Config> {
         }</span><br>`
       })
     }
-    return content
+    return content.replace(/\n/g, '<br>')
   }
 
   /**
@@ -392,9 +404,5 @@ export class SymbolicMap extends L7ChartView<Scene, L7Config> {
       mapStyle: 'normal'
     }
     return chart
-  }
-
-  protected setupOptions(chart: Chart, config: L7Config): L7Config {
-    return flow(this.configEmptyDataStrategy, this.configLabel)(chart, config)
   }
 }

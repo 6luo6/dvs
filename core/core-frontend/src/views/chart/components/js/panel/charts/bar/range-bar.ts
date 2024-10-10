@@ -23,7 +23,6 @@ const DEFAULT_DATA = []
  */
 export class RangeBar extends G2PlotChartView<BarOptions, Bar> {
   axisConfig = {
-    ...this['axisConfig'],
     yAxis: {
       name: `${t('chart.drag_block_value_start')} / ${t('chart.time_dimension_or_quota')}`,
       limit: 1,
@@ -123,6 +122,35 @@ export class RangeBar extends G2PlotChartView<BarOptions, Bar> {
 
     const isDate = !!chart.data.isDate
 
+    const axis = chart.yAxis ?? chart.yAxisExt ?? []
+    let dateFormat: string
+    const dateSplit = axis[0]?.datePattern === 'date_split' ? '/' : '-'
+    switch (axis[0]?.dateStyle) {
+      case 'y':
+        dateFormat = 'YYYY'
+        break
+      case 'y_M':
+        dateFormat = 'YYYY' + dateSplit + 'MM'
+        break
+      case 'y_M_d':
+        dateFormat = 'YYYY' + dateSplit + 'MM' + dateSplit + 'DD'
+        break
+      // case 'H_m_s':
+      //   dateFormat = 'HH:mm:ss'
+      //   break
+      case 'y_M_d_H':
+        dateFormat = 'YYYY' + dateSplit + 'MM' + dateSplit + 'DD' + ' HH'
+        break
+      case 'y_M_d_H_m':
+        dateFormat = 'YYYY' + dateSplit + 'MM' + dateSplit + 'DD' + ' HH:mm'
+        break
+      case 'y_M_d_H_m_s':
+        dateFormat = 'YYYY' + dateSplit + 'MM' + dateSplit + 'DD' + ' HH:mm:ss'
+        break
+      default:
+        dateFormat = 'YYYY-MM-dd HH:mm:ss'
+    }
+
     const minTime = chart.data.minTime
     const maxTime = chart.data.maxTime
 
@@ -143,7 +171,7 @@ export class RangeBar extends G2PlotChartView<BarOptions, Bar> {
               type: 'time',
               min: minTime,
               max: maxTime,
-              mask: 'YYYY-MM-DD HH:mm:ss'
+              mask: dateFormat
             },
             tempId: {
               key: true
@@ -153,7 +181,7 @@ export class RangeBar extends G2PlotChartView<BarOptions, Bar> {
             values: {
               min: minNumber,
               max: maxNumber,
-              mask: 'YYYY-MM-DD HH:mm:ss'
+              mask: dateFormat
             },
             tempId: {
               key: true

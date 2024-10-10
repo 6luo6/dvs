@@ -5,7 +5,12 @@ import { getViewConfig } from '@/views/chart/components/editor/util/chart'
 
 export const commonStyle = {
   rotate: 0,
-  opacity: 1
+  opacity: 1,
+  borderActive: false,
+  borderWidth: 1,
+  borderRadius: 5,
+  borderStyle: 'solid',
+  borderColor: '#cccccc'
 }
 
 // 轮询设置
@@ -22,12 +27,14 @@ export const BASE_EVENTS = {
     { key: 'jump', label: '跳转' },
     { key: 'download', label: '下载' },
     { key: 'share', label: '分享' },
+    { key: 'fullScreen', label: '全屏' },
     { key: 'showHidden', label: '弹窗区域' },
     { key: 'refreshDataV', label: '刷新' },
     { key: 'refreshView', label: '刷新图表' }
   ],
   jump: {
-    value: 'https://'
+    value: 'https://',
+    type: '_blank'
   },
   download: {
     value: true
@@ -245,6 +252,18 @@ export const commonAttr = {
 // 编辑器左侧组件列表
 const list = [
   {
+    component: 'Group',
+    name: '组合',
+    label: '组合',
+    propValue: '&nbsp;',
+    icon: 'icon_graphical',
+    innerType: 'Group',
+    style: {
+      width: 200,
+      height: 200
+    }
+  },
+  {
     id: 100000001,
     component: 'GroupArea',
     name: '组合区域',
@@ -288,7 +307,7 @@ const list = [
     component: 'UserView',
     name: '图表',
     label: '图表',
-    propValue: { textValue: '' },
+    propValue: { textValue: '', urlList: [] },
     icon: 'bar',
     innerType: 'bar',
     editing: false,
@@ -467,11 +486,8 @@ const list = [
     style: {
       width: 200,
       height: 200,
-      borderWidth: 1,
-      borderRadius: 5,
-      borderStyle: 'solid',
-      borderColor: '#cccccc',
-      backgroundColor: 'rgba(236,231,231,0.1)'
+      backgroundColor: 'rgba(236,231,231,0.1)',
+      borderActive: true
     }
   },
   {

@@ -2,7 +2,7 @@
   <div
     v-if="state.tabShow"
     style="width: 100%; height: 100%"
-    :class="headClass"
+    :class="[headClass, `ed-tabs-${curThemes}`]"
     class="custom-tabs-head"
     ref="tabComponentRef"
   >
@@ -23,31 +23,36 @@
           :name="tabItem.name"
         >
           <template #label>
-            <span :style="titleStyle(tabItem.name)">{{ tabItem.title }}</span>
-            <el-dropdown
-              v-if="isEditMode"
-              style="line-height: 4 !important"
-              trigger="click"
-              @command="handleCommand"
-            >
-              <span class="el-dropdown-link">
-                <el-icon v-if="isEdit"><ArrowDown /></el-icon>
-              </span>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item :command="beforeHandleCommand('editTitle', tabItem)">
-                    编辑标题
-                  </el-dropdown-item>
-
-                  <el-dropdown-item
-                    v-if="element.propValue.length > 1"
-                    :command="beforeHandleCommand('deleteCur', tabItem)"
-                  >
-                    删除
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+            <div @mousedown.stop>
+              <span :style="titleStyle(tabItem.name)">{{ tabItem.title }}</span>
+              <el-dropdown
+                v-if="isEditMode"
+                :effect="curThemes"
+                style="line-height: 4 !important"
+                trigger="click"
+                @command="handleCommand"
+              >
+                <span class="el-dropdown-link">
+                  <el-icon v-if="isEdit"><ArrowDown /></el-icon>
+                </span>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item :command="beforeHandleCommand('editTitle', tabItem)">
+                      编辑标题
+                    </el-dropdown-item>
+                    <el-dropdown-item :command="beforeHandleCommand('copyCur', tabItem)">
+                      复制
+                    </el-dropdown-item>
+                    <el-dropdown-item
+                      v-if="element.propValue.length > 1"
+                      :command="beforeHandleCommand('deleteCur', tabItem)"
+                    >
+                      删除
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
           </template>
           <de-canvas
             v-if="isEdit && !mobileInPc"
@@ -65,12 +70,13 @@
             :dv-info="dvInfo"
             :cur-gap="curPreviewGap"
             :component-data="tabItem.componentData"
-            :canvas-style-data="canvasStyleData"
+            :canvas-style-data="{}"
             :canvas-view-info="canvasViewInfo"
             :canvas-id="element.id + '--' + tabItem.name"
             :preview-active="editableTabsValue === tabItem.name"
             :show-position="showPosition"
             :outer-scale="scale"
+            :outer-search-count="searchCount"
           ></de-preview>
         </el-tab-pane>
       </template>
@@ -116,15 +122,18 @@ import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { storeToRefs } from 'pinia'
 import { guid } from '@/views/visualized/data/dataset/form/util'
 import eventBus from '@/utils/eventBus'
-import { canvasChangeAdaptor, findComponentIndexById } from '@/utils/canvasUtils'
+import { canvasChangeAdaptor, findComponentIndexById, isDashboard } from '@/utils/canvasUtils'
 import DeCustomTab from '@/custom-component/de-tabs/DeCustomTab.vue'
 import DePreview from '@/components/data-visualization/canvas/DePreview.vue'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import { getPanelAllLinkageInfo } from '@/api/visualization/linkage'
+import { dataVTabComponentAdd, groupSizeStyleAdaptor } from '@/utils/style'
+import { copyStoreWithOut, deepCopyTabItemHelper } from '@/store/modules/data-visualization/copy'
 const dvMainStore = dvMainStoreWithOut()
 const { tabMoveInActiveId, bashMatrixInfo, editMode, mobileInPc } = storeToRefs(dvMainStore)
 const tabComponentRef = ref(null)
 let carouselTimer = null
+const copyStore = copyStoreWithOut()
 
 const props = defineProps({
   canvasStyleData: {
@@ -160,10 +169,24 @@ const props = defineProps({
     type: Number,
     required: false,
     default: 1
+  },
+  // 仪表板刷新计时器
+  searchCount: {
+    type: Number,
+    required: false,
+    default: 0
   }
 })
-const { element, isEdit, showPosition, canvasStyleData, canvasViewInfo, dvInfo, scale } =
-  toRefs(props)
+const {
+  element,
+  isEdit,
+  showPosition,
+  canvasStyleData,
+  canvasViewInfo,
+  dvInfo,
+  scale,
+  searchCount
+} = toRefs(props)
 
 const state = reactive({
   activeTabName: '',
@@ -180,7 +203,7 @@ const noBorderColor = ref('none')
 let currentInstance
 
 const isEditMode = computed(() => editMode.value === 'edit' && isEdit.value && !mobileInPc.value)
-
+const curThemes = isDashboard() ? 'light' : 'dark'
 const calcTabLength = () => {
   setTimeout(() => {
     if (element.value.propValue.length > 1) {
@@ -240,6 +263,14 @@ function deleteCur(param) {
     }
   }
 }
+function copyCur(param) {
+  addTab()
+  const newTabItem = element.value.propValue[element.value.propValue.length - 1]
+  const idMap = {}
+  const newCanvasId = element.value.id + '--' + newTabItem.name
+  newTabItem.componentData = deepCopyTabItemHelper(newCanvasId, param.componentData, idMap)
+  dvMainStore.updateCopyCanvasView(idMap)
+}
 
 function editCurTitle(param) {
   state.activeTabName = param.name
@@ -255,6 +286,9 @@ function handleCommand(command) {
       break
     case 'deleteCur':
       deleteCur(command.param)
+      break
+    case 'copyCur':
+      copyCur(command.param)
       break
   }
 }
@@ -273,25 +307,33 @@ const componentMoveIn = component => {
     if (editableTabsValue.value === tabItem.name) {
       //获取主画布当前组件的index
       const curIndex = findComponentIndexById(component.id)
-      // 从主画布中移除
-      eventBus.emit('removeMatrixItem-canvas-main', curIndex)
-      dvMainStore.setCurComponent({ component: null, index: null })
-      component.canvasId = element.value.id + '--' + tabItem.name
-      const refInstance = currentInstance.refs['tabCanvas_' + index][0]
-      if (refInstance) {
-      //数据大屏取消矩阵变换
-      if (dvInfo.value.type !== 'dataV') {
-        const matrixBase = refInstance.getBaseMatrixSize() //矩阵基础大小
-        canvasChangeAdaptor(component, matrixBase)
-      }
-      tabItem.componentData.push(component)
-      nextTick(() => {
-        component.x = 1
-        component.y = 1
-        component.style.left = 0
-        component.style.top = 0
-        refInstance.addItemBox(component) //在适当的时候初始化布局组件
-      })
+      if (curIndex > -1) {
+        // 从主画布中移除
+        if (isDashboard()) {
+          eventBus.emit('removeMatrixItem-canvas-main', curIndex)
+          dvMainStore.setCurComponent({ component: null, index: null })
+          component.canvasId = element.value.id + '--' + tabItem.name
+          const refInstance = currentInstance.refs['tabCanvas_' + index][0]
+          if (refInstance) {
+            const matrixBase = refInstance.getBaseMatrixSize() //矩阵基础大小
+            canvasChangeAdaptor(component, matrixBase)
+            component.x = 1
+            component.y = 200
+            component.style.left = 0
+            component.style.top = 0
+            tabItem.componentData.push(component)
+            nextTick(() => {
+              refInstance.addItemBox(component) //在适当的时候初始化布局组件
+            })
+          }
+        } else {
+          // 从主画布删除
+          dvMainStore.deleteComponent(curIndex)
+          dvMainStore.setCurComponent({ component: null, index: null })
+          component.canvasId = element.value.id + '--' + tabItem.name
+          dataVTabComponentAdd(component, element.value.style)
+          tabItem.componentData.push(component)
+        }
       }
     }
   })
@@ -300,22 +342,31 @@ const componentMoveIn = component => {
 }
 
 const componentMoveOut = component => {
-  //数据大屏取消矩阵变换
-  if (dvInfo.value.type !== 'dataV') {
+  if (isDashboard()) {
     canvasChangeAdaptor(component, bashMatrixInfo.value, true)
-  } else {
-    const targetDomComponent = document.querySelector('#point-shadow-main')
-    const componentLeft = targetDomComponent['offsetLeft']
-    const componentTop = targetDomComponent['offsetTop']
-    component.style.left = componentLeft
-    component.style.top = componentTop
   }
   // 从Tab画布中移除
   eventBus.emit('removeMatrixItemById-' + component.canvasId, component.id)
   dvMainStore.setCurComponent({ component: null, index: null })
   // 主画布中添加
-  eventBus.emit('moveOutFromTab-canvas-main', component)
+  if (isDashboard()) {
+    eventBus.emit('moveOutFromTab-canvas-main', component)
+  } else {
+    addToMain(component)
+  }
   reloadLinkage()
+}
+
+const addToMain = component => {
+  const { left, top } = element.value.style
+  component.style.left = component.style.left + left
+  component.style.top = component.style.top + top
+  component.canvasId = 'canvas-main'
+  dvMainStore.addComponent({
+    component,
+    index: undefined,
+    isFromGroup: true
+  })
 }
 
 const moveActive = computed(() => {
@@ -380,6 +431,12 @@ const borderActiveColor = computed(() => {
     return 'none'
   }
 })
+
+const onResetLayout = () => {
+  if (!isDashboard()) {
+    groupSizeStyleAdaptor(element.value)
+  }
+}
 
 const titleValid = computed(() => {
   return !!state.textarea && !!state.textarea.trim()
@@ -450,6 +507,9 @@ onMounted(() => {
   eventBus.on('onTabSortChange-' + element.value.id, reShow)
   currentInstance = getCurrentInstance()
   initCarousel()
+  nextTick(() => {
+    groupSizeStyleAdaptor(element.value)
+  })
 })
 
 onBeforeMount(() => {
@@ -466,9 +526,20 @@ onBeforeMount(() => {
 :deep(.ed-tabs__content) {
   height: calc(100% - 46px) !important;
 }
-:deep(.ed-tabs__new-tab) {
-  margin-right: 25px;
-  background-color: #fff;
+.ed-tabs-dark {
+  :deep(.ed-tabs__new-tab) {
+    margin-right: 25px;
+    color: #fff;
+  }
+  :deep(.el-dropdown-link) {
+    color: #fff;
+  }
+}
+.ed-tabs-light {
+  :deep(.ed-tabs__new-tab) {
+    margin-right: 25px;
+    background-color: #fff;
+  }
 }
 .el-tab-pane-custom {
   width: 100%;

@@ -25,6 +25,7 @@ interface SelectConfig {
   displayType: string
   showEmpty: boolean
   id: string
+  placeholder: string
   resultMode: number
   displayId: string
   sort: string
@@ -76,6 +77,7 @@ const multiple = ref(false)
 const options = shallowRef([])
 const optionsDynamic = shallowRef([])
 const unMountSelect: Ref = inject('unmount-select')
+const placeholder: Ref = inject('placeholder')
 const releaseSelect = inject('release-unmount-select', Function, true)
 const queryDataForId = inject('query-data-for-id', Function, true)
 const isConfirmSearch = inject('is-confirm-search', Function, true)
@@ -83,6 +85,12 @@ const queryConditionWidth = inject('com-width', Function, true)
 const cascadeList = inject('cascade-list', Function, true)
 const setCascadeDefault = inject('set-cascade-default', Function, true)
 
+const placeholderText = computed(() => {
+  if (placeholder.value.placeholderShow) {
+    return props.config.placeholder
+  }
+  return ' '
+})
 const cascade = computed(() => {
   return cascadeList() || []
 })
@@ -613,6 +621,7 @@ defineExpose({
     key="multiple"
     ref="mult"
     v-model="selectValue"
+    :placeholder="placeholderText"
     v-loading="loading"
     filterable
     @change="handleValueChange"
@@ -634,6 +643,7 @@ defineExpose({
     v-else
     v-model="selectValue"
     key="single"
+    :placeholder="placeholderText"
     v-loading="loading"
     @change="handleValueChange"
     :clearable="!config.defaultValueCheck"

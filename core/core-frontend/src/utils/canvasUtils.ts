@@ -131,6 +131,93 @@ function matrixAdaptor(componentItem) {
   }
 }
 
+export function historyItemAdaptor(
+  componentItem,
+  reportFilterInfo,
+  attachInfo,
+  canvasVersion,
+  canvasInfo
+) {
+  componentItem['canvasActive'] = false
+  // 定时报告过滤组件适配 如果当前是定时报告默认切有设置对应的过滤组件默认值，则替换过滤组件
+  if (
+    componentItem.component === 'VQuery' &&
+    attachInfo.source === 'report' &&
+    !!reportFilterInfo
+  ) {
+    componentItem.propValue.forEach((filterItem, index) => {
+      if (reportFilterInfo[filterItem.id]) {
+        componentItem.propValue[index] = JSON.parse(reportFilterInfo[filterItem.id].filterInfo)
+      }
+    })
+  }
+  if (componentItem.component === 'Group') {
+    componentItem.expand = componentItem.expand || false
+  }
+
+  if (componentItem.component === 'Picture') {
+    componentItem.style['adaptation'] = componentItem.style['adaptation'] || 'adaptation'
+  }
+  // 样式设置
+  componentItem.style['adaptation'] = componentItem.style['adaptation'] || 'adaptation'
+  if (componentItem.style['borderActive'] === undefined) {
+    componentItem.style['borderActive'] = false
+    componentItem.style['borderWidth'] = 1
+    componentItem.style['borderRadius'] = 5
+    componentItem.style['borderStyle'] = 'solid'
+    componentItem.style['borderColor'] = '#cccccc'
+  } else {
+    componentItem.style['borderWidth'] =
+      componentItem.style['borderWidth'] === undefined ? 1 : componentItem.style['borderWidth']
+    componentItem.style['borderRadius'] =
+      componentItem.style['borderRadius'] === undefined ? 5 : componentItem.style['borderRadius']
+    componentItem.style['borderStyle'] =
+      componentItem.style['borderStyle'] === undefined
+        ? 'solid'
+        : componentItem.style['borderStyle']
+    componentItem.style['borderColor'] =
+      componentItem.style['borderColor'] === undefined
+        ? '#cccccc'
+        : componentItem.style['borderColor']
+  }
+
+  // public
+  componentItem['maintainRadio'] = componentItem['maintainRadio'] || false
+  componentItem['multiDimensional'] =
+    componentItem['multiDimensional'] || deepCopy(MULTI_DIMENSIONAL)
+  componentItem['carousel'] = componentItem['carousel'] || deepCopy(BASE_CAROUSEL)
+  componentItem['aspectRatio'] = componentItem['aspectRatio'] || 1
+  if (componentItem.component === 'UserView') {
+    componentItem.actionSelection = componentItem.actionSelection || deepCopy(ACTION_SELECTION)
+  }
+  // 2 为基础版本 此处需要增加仪表板矩阵密度
+  if ((!canvasVersion || canvasVersion === 2) && canvasInfo.type === 'dashboard') {
+    matrixAdaptor(componentItem)
+  }
+  // 组件事件适配
+  componentItem.events =
+    componentItem.events &&
+    componentItem.events.checked !== undefined &&
+    componentItem.events.type !== 'displayChange'
+      ? componentItem.events
+      : deepCopy(BASE_EVENTS)
+
+  componentItem.events['jump'].type = componentItem.events['jump'].type || '_blank'
+  componentItem['category'] = componentItem['category'] || 'base'
+
+  if (componentItem.component === 'DeTabs') {
+    componentItem.propValue.forEach(tabItem => {
+      tabItem.componentData.forEach(tabComponent => {
+        historyItemAdaptor(tabComponent, reportFilterInfo, attachInfo, canvasVersion, canvasInfo)
+      })
+    })
+  } else if (componentItem.component === 'Group') {
+    componentItem.propValue.forEach(groupItem => {
+      historyItemAdaptor(groupItem, reportFilterInfo, attachInfo, canvasVersion, canvasInfo)
+    })
+  }
+}
+
 export function historyAdaptor(
   canvasStyleResult,
   canvasDataResult,
@@ -142,54 +229,24 @@ export function historyAdaptor(
   canvasStyleResult.component['seniorStyleSetting'] =
     canvasStyleResult.component['seniorStyleSetting'] || deepCopy(SENIOR_STYLE_SETTING_LIGHT)
   canvasStyleResult['screenAdaptor'] = canvasStyleResult['screenAdaptor'] || 'widthFirst'
+  canvasStyleResult['refreshBrowserEnable'] =
+    canvasStyleResult['refreshBrowserEnable'] === undefined
+      ? false
+      : canvasStyleResult['refreshBrowserEnable']
+  canvasStyleResult['refreshBrowserUnit'] = canvasStyleResult['refreshBrowserUnit'] || 'minute'
+  canvasStyleResult['refreshBrowserTime'] = canvasStyleResult['refreshBrowserTime'] || 5
   // 同步宽高比例(大屏使用)
   canvasStyleResult['scaleWidth'] = canvasStyleResult['scale']
   canvasStyleResult['scaleHeight'] = canvasStyleResult['scale']
   canvasStyleResult['popupAvailable'] =
     canvasStyleResult['popupAvailable'] === undefined ? true : canvasStyleResult['popupAvailable'] //兼容弹框区域开关
+  canvasStyleResult['popupButtonAvailable'] =
+    canvasStyleResult['popupButtonAvailable'] === undefined
+      ? true
+      : canvasStyleResult['popupButtonAvailable'] //兼容弹框区域按钮开关
   const reportFilterInfo = canvasInfo.reportFilterInfo
   canvasDataResult.forEach(componentItem => {
-    componentItem['canvasActive'] = false
-    // 定时报告过滤组件适配 如果当前是定时报告默认切有设置对应的过滤组件默认值，则替换过滤组件
-    if (
-      componentItem.component === 'VQuery' &&
-      attachInfo.source === 'report' &&
-      !!reportFilterInfo
-    ) {
-      componentItem.propValue.forEach((filterItem, index) => {
-        if (reportFilterInfo[filterItem.id]) {
-          componentItem.propValue[index] = JSON.parse(reportFilterInfo[filterItem.id].filterInfo)
-        }
-      })
-    }
-    if (componentItem.component === 'Group') {
-      componentItem.expand = componentItem.expand || false
-    }
-
-    if (componentItem.component === 'Picture') {
-      componentItem.style['adaptation'] = componentItem.style['adaptation'] || 'adaptation'
-    }
-    // public
-    componentItem['maintainRadio'] = componentItem['maintainRadio'] || false
-    componentItem['multiDimensional'] =
-      componentItem['multiDimensional'] || deepCopy(MULTI_DIMENSIONAL)
-    componentItem['carousel'] = componentItem['carousel'] || deepCopy(BASE_CAROUSEL)
-    componentItem['aspectRatio'] = componentItem['aspectRatio'] || 1
-    if (componentItem.component === 'UserView') {
-      componentItem.actionSelection = componentItem.actionSelection || deepCopy(ACTION_SELECTION)
-    }
-    // 2 为基础版本 此处需要增加仪表板矩阵密度
-    if ((!canvasVersion || canvasVersion === 2) && canvasInfo.type === 'dashboard') {
-      matrixAdaptor(componentItem)
-    }
-    // 组件事件适配
-    componentItem.events =
-      componentItem.events &&
-      componentItem.events.checked !== undefined &&
-      componentItem.events.type !== 'displayChange'
-        ? componentItem.events
-        : deepCopy(BASE_EVENTS)
-    componentItem['category'] = componentItem['category'] || 'base'
+    historyItemAdaptor(componentItem, reportFilterInfo, attachInfo, canvasVersion, canvasInfo)
   })
 }
 
@@ -212,6 +269,11 @@ export function refreshOtherComponent(dvId, busiFlag) {
       for (let i = 0; i < componentData.value.length; i++) {
         const component = componentData.value[i]
         if (refreshIdList.includes(component.id) && canvasDataResultMap[component.id]) {
+          const { top, left, height, width } = componentData.value[i].style
+          canvasDataResultMap[component.id].style.top = top
+          canvasDataResultMap[component.id].style.left = left
+          canvasDataResultMap[component.id].style.height = height
+          canvasDataResultMap[component.id].style.width = width
           componentData.value[i] = canvasDataResultMap[component.id]
         }
       }
@@ -226,7 +288,16 @@ export function initCanvasDataPrepare(dvId, busiFlag, callBack) {
   let attachInfo = { source: 'main' }
   if (dvMainStore.canvasAttachInfo && !!dvMainStore.canvasAttachInfo.taskId) {
     attachInfo = { source: 'report', taskId: dvMainStore.canvasAttachInfo.taskId }
+    const showWatermarkExist =
+      dvMainStore.canvasAttachInfo.hasOwnProperty('showWatermark') &&
+      typeof dvMainStore.canvasAttachInfo.showWatermark !== 'undefined' &&
+      dvMainStore.canvasAttachInfo.showWatermark !== null
+    if (showWatermarkExist) {
+      const enable = dvMainStore.canvasAttachInfo.showWatermark === 'true'
+      attachInfo['showWatermark'] = enable
+    }
   }
+
   method(dvId, busiFlagCustom, attachInfo).then(res => {
     const canvasInfo = res.data
     const watermarkInfo = {
@@ -418,7 +489,7 @@ export async function canvasSave(callBack) {
     })
   }
   if (dsNameCheck === 'repeat') {
-    ElMessage.error('数据集名称已存在')
+    ElMessage.error('数据集分组名称已存在')
     return
   }
 
@@ -476,8 +547,16 @@ export function isSameCanvas(item, canvasId) {
   return item.canvasId === canvasId
 }
 
+export function isGroupOrTabCanvas(canvasId) {
+  return isGroupCanvas(canvasId) || isTabCanvas(canvasId)
+}
+
 export function isGroupCanvas(canvasId) {
   return canvasId && canvasId.includes('Group')
+}
+
+export function isTabCanvas(canvasId) {
+  return canvasId && !canvasId.includes('Group') && !isMainCanvas(canvasId)
 }
 
 export function findComponentIndexById(componentId, componentDataMatch = componentData.value) {
@@ -604,6 +683,8 @@ export async function decompressionPre(params, callBack) {
       //历史字段适配
       sourceCanvasStyle.component['seniorStyleSetting'] =
         sourceCanvasStyle.component['seniorStyleSetting'] || deepCopy(SENIOR_STYLE_SETTING_LIGHT)
+      sourceCanvasStyle['scaleWidth'] = sourceCanvasStyle['scale']
+      sourceCanvasStyle['scaleHeight'] = sourceCanvasStyle['scaleHeight']
       deTemplateData = {
         canvasStyleData: sourceCanvasStyle,
         componentData: sourceComponentData,
@@ -757,3 +838,13 @@ export function useModal() {
   return { closeModal, isShowModal, modalUrl, modalSetting, jumpLink, windowsJump }
 }
 
+export function maxYComponentCount() {
+  if (componentData.value.length === 0) {
+    return 1
+  } else {
+    return componentData.value
+      .filter(item => item.y)
+      .map(item => item.y + item.sizeY) // 计算每个元素的 y + sizeY
+      .reduce((max, current) => Math.max(max, current), 0)
+  }
+}

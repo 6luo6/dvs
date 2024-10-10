@@ -14,16 +14,19 @@
         <div class="top-area">
           <span class="top-area-text">已选图表：</span>
           <span class="top-area-value">
-            <Icon class-name="view-type-icon" :name="state.curJumpViewInfo.type" />
+            <Icon class-name="view-type-icon"
+              ><component
+                class="svg-icon view-type-icon"
+                :is="iconChartMap[state.curJumpViewInfo.type]"
+              ></component
+            ></Icon>
             {{ state.curJumpViewInfo.title }}</span
           >
           <span class="top-area-text margin-left">所用数据集：</span>
           <span class="top-area-value">
-            <Icon
-              style="vertical-align: -0.2em"
-              class-name="view-type-icon"
-              name="dataset-outline"
-            />
+            <Icon name="dataset-outline"
+              ><datasetOutline style="vertical-align: -0.2em" class="svg-icon view-type-icon"
+            /></Icon>
             {{ state.curDatasetInfo.name }}</span
           >
         </div>
@@ -64,9 +67,12 @@
                     <span class="tree-select-field">
                       <el-icon style="margin-right: 4px">
                         <Icon
-                          :name="`field_${fieldType[data.sourceDeType]}`"
-                          :className="`field-icon-${fieldType[data.sourceDeType]}`"
-                        />
+                          ><component
+                            class="svg-icon"
+                            :class="`field-icon-${fieldType[data.sourceDeType]}`"
+                            :is="iconFieldMap[fieldType[data.sourceDeType]]"
+                          ></component
+                        ></Icon>
                       </el-icon>
                       {{ data.sourceFieldName }}
                     </span>
@@ -107,11 +113,27 @@
                     <el-radio label="_self">{{ t('visualization.now_window') }}</el-radio>
                     <el-radio label="_blank">{{ t('visualization.new_window') }}</el-radio>
                     <el-radio label="modal">弹框</el-radio>
+                    <el-radio label="newPop">{{ t('visualization.pop_window') }}</el-radio>
                   </el-radio-group>
                   <el-radio-group class="larger-radio" v-if="!state.linkJumpInfo" disabled>
                     <el-radio label="_self">{{ t('visualization.now_window') }}</el-radio>
                     <el-radio label="_blank">{{ t('visualization.new_window') }}</el-radio>
                     <el-radio label="modal">弹框</el-radio>
+                    <el-radio label="newPop">{{ t('visualization.pop_window') }}</el-radio>
+                  </el-radio-group>
+                </el-form-item>
+
+                <el-form-item
+                  class="radio-group-box"
+                  v-if="state.linkJumpInfo?.jumpType === 'newPop'"
+                >
+                  <template #label>
+                    <span class="title">窗口大小</span>
+                  </template>
+                  <el-radio-group class="larger-radio" v-model="state.linkJumpInfo.windowSize">
+                    <el-radio label="large">大</el-radio>
+                    <el-radio label="middle">中</el-radio>
+                    <el-radio label="small">小</el-radio>
                   </el-radio-group>
                   <el-icon
                     v-if="state.linkJumpInfo && state.linkJumpInfo.jumpType == 'modal'"
@@ -141,7 +163,9 @@
                           </el-form-item>
                         </div>
                         <div class="icon-center">
-                          <Icon style="width: 20px; height: 20px" name="dv-link-target" />
+                          <Icon name="dv-link-target"
+                            ><dvLinkTarget style="width: 20px; height: 20px" class="svg-icon"
+                          /></Icon>
                         </div>
                         <div style="flex: 1">
                           <el-form-item>
@@ -162,10 +186,12 @@
                                     style="display: inline-block"
                                     v-if="data.leaf"
                                   >
-                                    <Icon name="dv-dashboard-spine"></Icon>
+                                    <Icon name="dv-dashboard-spine"
+                                      ><dvDashboardSpine class="svg-icon"
+                                    /></Icon>
                                   </el-icon>
                                   <el-icon size="18px" style="display: inline-block" v-else>
-                                    <Icon name="dv-folder"></Icon>
+                                    <Icon name="dv-folder"><dvFolder class="svg-icon" /></Icon>
                                   </el-icon>
                                   <span
                                     style="margin-left: 8px; font-size: 14px"
@@ -209,10 +235,13 @@
                                 >
                                   <span class="custom-option">
                                     <Icon
-                                      style="width: 14px; height: 14px"
-                                      :name="`field_${fieldType[curViewField.deType]}`"
-                                      :className="`field-icon-${fieldType[curViewField.deType]}`"
-                                    />
+                                      ><component
+                                        class="svg-icon"
+                                        style="width: 14px; height: 14px"
+                                        :class="`field-icon-${fieldType[curViewField.deType]}`"
+                                        :is="iconFieldMap[fieldType[curViewField.deType]]"
+                                      ></component
+                                    ></Icon>
                                     <span style="float: left; margin-left: 4px; font-size: 14px">{{
                                       curViewField.name
                                     }}</span>
@@ -221,7 +250,9 @@
                               </el-select>
                             </div>
                             <div class="icon-center">
-                              <Icon style="width: 20px; height: 20px" name="dv-link-target" />
+                              <Icon name="dv-link-target"
+                                ><dvLinkTarget style="width: 20px; height: 20px" class="svg-icon"
+                              /></Icon>
                             </div>
                             <div style="flex: 1">
                               <el-select
@@ -239,10 +270,12 @@
                                 >
                                   <span class="custom-option">
                                     <Icon
-                                      :name="item.type"
-                                      class-name="view-type-icon"
-                                      style="width: 14px; height: 14px"
-                                    />
+                                      ><component
+                                        class="svg-icon view-type-icon"
+                                        style="width: 14px; height: 14px"
+                                        :is="iconChartMap[item.type]"
+                                      ></component
+                                    ></Icon>
                                     <span style="float: left; margin-left: 4px; font-size: 14px">{{
                                       item.title
                                     }}</span>
@@ -267,10 +300,13 @@
                                 >
                                   <span class="custom-option">
                                     <Icon
-                                      style="width: 14px; height: 14px"
-                                      :name="`field_${fieldType[viewField.deType]}`"
-                                      :className="`field-icon-${fieldType[viewField.deType]}`"
-                                    />
+                                      ><component
+                                        class="svg-icon"
+                                        style="width: 14px; height: 14px"
+                                        :class="`field-icon-${fieldType[viewField.deType]}`"
+                                        :is="iconFieldMap[fieldType[viewField.deType]]"
+                                      ></component
+                                    ></Icon>
                                     <span style="float: left; margin-left: 4px; font-size: 14px">{{
                                       viewField.name
                                     }}</span>
@@ -285,7 +321,9 @@
                               @click="deleteLinkJumpField(index)"
                             >
                               <el-icon size="20px">
-                                <Icon name="icon_delete-trash_outlined" />
+                                <Icon name="icon_delete-trash_outlined"
+                                  ><icon_deleteTrash_outlined class="svg-icon"
+                                /></Icon>
                               </el-icon>
                             </el-button>
                           </div>
@@ -314,7 +352,9 @@
                               {{ $t('visualization.target_url_tips') }}
                             </template>
                             <el-icon size="16px" class="hint-icon">
-                              <Icon name="icon_info_outlined" />
+                              <Icon name="icon_info_outlined"
+                                ><icon_info_outlined class="svg-icon"
+                              /></Icon>
                             </el-icon>
                           </el-tooltip>
                         </div>
@@ -334,7 +374,9 @@
                               <span v-html="$t('chart.reference_field_tip')"></span>
                             </template>
                             <el-icon size="16px" class="hint-icon">
-                              <Icon name="icon_info_outlined" />
+                              <Icon name="icon_info_outlined"
+                                ><icon_info_outlined class="svg-icon"
+                              /></Icon>
                             </el-icon>
                           </el-tooltip>
                         </div>
@@ -359,9 +401,12 @@
                             >
                               <el-icon>
                                 <Icon
-                                  :name="`field_${fieldType[item.sourceDeType]}`"
-                                  :className="`field-icon-${fieldType[item.sourceDeType]}`"
-                                />
+                                  ><component
+                                    class="svg-icon"
+                                    :class="`field-icon-${fieldType[item.sourceDeType]}`"
+                                    :is="iconFieldMap[fieldType[item.sourceDeType]]"
+                                  ></component
+                                ></Icon>
                               </el-icon>
                               {{ item.sourceFieldName }}
                             </span>
@@ -398,6 +443,14 @@
 </template>
 
 <script lang="ts" setup>
+import { iconFieldMap } from '@/components/icon-group/field-list'
+import { iconChartMap } from '@/components/icon-group/chart-list'
+import datasetOutline from '@/assets/svg/dataset-outline.svg'
+import dvLinkTarget from '@/assets/svg/dv-link-target.svg'
+import dvDashboardSpine from '@/assets/svg/dv-dashboard-spine.svg'
+import dvFolder from '@/assets/svg/dv-folder.svg'
+import icon_deleteTrash_outlined from '@/assets/svg/icon_delete-trash_outlined.svg'
+import icon_info_outlined from '@/assets/svg/icon_info_outlined.svg'
 import {
   queryVisualizationJumpInfo,
   queryWithViewId,
@@ -933,7 +986,7 @@ defineExpose({
 
   color: var(--neutral-900, #1f2329);
   /* 中文/桌面端/正文 14 22 Regular */
-  font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+  font-family: var(--de-custom_font, 'PingFang');
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
@@ -1017,7 +1070,7 @@ span {
   height: 100%;
 
   .settings-header {
-    height: 92px;
+    height: auto;
     border-bottom: 1px solid #e6e6e6;
 
     .radio-group-box {
@@ -1042,6 +1095,7 @@ span {
 
   .settings-main {
     padding: 16px;
+    overflow: hidden;
     .empty {
       width: 100%;
       height: 100%;

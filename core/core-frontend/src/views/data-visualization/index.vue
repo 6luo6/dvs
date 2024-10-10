@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import dvRuler from '@/assets/svg/dv-ruler.svg'
 import CanvasAttr from '@/components/data-visualization/CanvasAttr.vue'
 import { computed, watch, onMounted, reactive, ref, nextTick, onUnmounted } from 'vue'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
@@ -149,7 +150,6 @@ const handleNew = newComponentInfo => {
 }
 
 const handleDrop = e => {
-  console.log('===handleDrop2')
   e.preventDefault()
   e.stopPropagation()
   const componentInfo = e.dataTransfer.getData('id')
@@ -438,7 +438,7 @@ eventBus.on('handleNew', handleNew)
       <main id="dv-main-center" class="center" ref="canvasCenterRef">
         <div class="de-ruler-icon-outer">
           <el-icon class="de-ruler-icon">
-            <Icon name="dv-ruler" />
+            <Icon name="dv-ruler"><dvRuler class="svg-icon" /></Icon>
           </el-icon>
         </div>
         <de-ruler ref="deWRulerRef"></de-ruler>
@@ -530,6 +530,7 @@ eventBus.on('handleNew', handleNew)
     @loaded="XpackLoaded"
     @load-fail="XpackLoaded"
   />
+  <xpack-component jsname="L2NvbXBvbmVudC90aHJlc2hvbGQtd2FybmluZy9UaHJlc2hvbGREaWFsb2c=" />
   <canvas-cache-dialog ref="canvasCacheOutRef" @doUseCache="doUseCache"></canvas-cache-dialog>
   <dv-preview
     v-if="fullscreenFlag"

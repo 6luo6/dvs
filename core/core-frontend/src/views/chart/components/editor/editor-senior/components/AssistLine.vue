@@ -1,4 +1,6 @@
 <script lang="tsx" setup>
+import icon_edit_outlined from '@/assets/svg/icon_edit_outlined.svg'
+import icon_info_outlined from '@/assets/svg/icon_info_outlined.svg'
 import { onMounted, reactive, watch, computed, PropType } from 'vue'
 import { useI18n } from '@/hooks/web/useI18n'
 import { ElIcon, ElMessage } from 'element-plus-secondary'
@@ -156,21 +158,21 @@ onMounted(() => {
         >
           已设置
         </span>
-        <el-button
+        <button
           :class="'label-' + props.themes"
-          :style="{ width: '24px', marginLeft: '6px' }"
+          :style="{ marginLeft: '6px' }"
           :disabled="!state.assistLineCfg.enable"
-          class="circle-button font14"
-          text
-          size="small"
+          class="circle-button_icon"
           @click="editLine"
         >
-          <template #icon>
-            <el-icon size="14px">
-              <Icon name="icon_edit_outlined" />
-            </el-icon>
-          </template>
-        </el-button>
+          <el-icon>
+            <Icon
+              ><icon_edit_outlined
+                :class="state.assistLineCfg.enable && 'primary-color'"
+                class="svg-icon"
+            /></Icon>
+          </el-icon>
+        </button>
       </span>
     </div>
 
@@ -219,12 +221,12 @@ onMounted(() => {
       <template #header>
         <div class="assist-line-cfg-header">
           <span class="ed-dialog__title">{{ t('chart.assist_line') }}</span>
-          <el-tooltip class="item" effect="dark" placement="top">
+          <el-tooltip class="item" effect="ndark" placement="top">
             <template #content>
               <span> {{ t('chart.assist_line_tip') }}</span>
             </template>
             <el-icon class="hint-icon" :class="{ 'hint-icon--dark': themes === 'dark' }">
-              <Icon name="icon_info_outlined" />
+              <Icon name="icon_info_outlined"><icon_info_outlined class="svg-icon" /></Icon>
             </el-icon>
           </el-tooltip>
         </div>
@@ -361,11 +363,11 @@ span {
 }
 
 .label-dark {
-  font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+  font-family: var(--de-custom_font, 'PingFang');
   font-style: normal;
   font-weight: 400;
   line-height: 20px;
-  color: #a6a6a6 !important;
+  color: #a6a6a6;
   &.ed-button {
     color: var(--ed-color-primary) !important;
   }
@@ -377,6 +379,15 @@ span {
 .font14 {
   :deep(.ed-icon) {
     font-size: 14px;
+  }
+}
+.hint-icon {
+  cursor: pointer;
+  font-size: 14px;
+  color: #646a73;
+
+  &.hint-icon--dark {
+    color: #a6a6a6;
   }
 }
 </style>

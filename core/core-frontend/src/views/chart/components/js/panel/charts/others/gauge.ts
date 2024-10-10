@@ -21,6 +21,7 @@ const DEFAULT_DATA = []
 export class Gauge extends G2PlotChartView<GaugeOptions, G2Gauge> {
   properties: EditorProperty[] = [
     'background-overall-component',
+    'border-style',
     'basic-style-selector',
     'label-selector',
     'misc-selector',
@@ -29,6 +30,7 @@ export class Gauge extends G2PlotChartView<GaugeOptions, G2Gauge> {
   ]
   propertyInner: EditorPropertyInner = {
     'background-overall-component': ['all'],
+    'border-style': ['all'],
     'basic-style-selector': ['colors', 'alpha', 'gradient', 'gaugeAxisLine', 'gaugePercentLabel'],
     'label-selector': ['fontSize', 'color', 'labelFormatter'],
     'title-selector': [
@@ -264,8 +266,7 @@ export class Gauge extends G2PlotChartView<GaugeOptions, G2Gauge> {
               return ''
             }
             if (gaugePercentLabel === false) {
-              const val = v === '0' ? min : v === '1' ? max : min + (max - min) * v
-              return valueFormatter(val, labelFormatter)
+              return v === '0' ? min : v === '1' ? max : min + (max - min) * v
             }
             return v === '0' ? v : v * 100 + '%'
           }

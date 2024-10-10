@@ -17,11 +17,13 @@ import PopArea from '@/custom-component/pop-area/Component.vue'
 import CanvasFilterBtn from '@/custom-component/canvas-filter-btn/Component.vue'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import DatasetParamsComponent from '@/components/visualization/DatasetParamsComponent.vue'
+import DeFullscreen from '@/components/visualization/common/DeFullscreen.vue'
 const dvMainStore = dvMainStoreWithOut()
 const { pcMatrixCount, curComponent, mobileInPc, canvasState } = storeToRefs(dvMainStore)
 const openHandler = ref(null)
 const customDatasetParamsRef = ref(null)
-
+const emits = defineEmits(['onResetLayout'])
+const fullScreeRef = ref(null)
 const props = defineProps({
   canvasStyleData: {
     type: Object,
@@ -66,6 +68,11 @@ const props = defineProps({
     required: false,
     default: 1
   },
+  outerSearchCount: {
+    type: Number,
+    required: false,
+    default: 0
+  },
   isSelector: {
     type: Boolean,
     default: false
@@ -81,7 +88,8 @@ const {
   showPosition,
   previewActive,
   downloadStatus,
-  outerScale
+  outerScale,
+  outerSearchCount
 } = toRefs(props)
 const domId = 'preview-' + canvasId.value
 const scaleWidthPoint = ref(100)
@@ -93,15 +101,17 @@ const cellHeight = ref(10)
 const userViewEnlargeRef = ref(null)
 const searchCount = ref(0)
 const refreshTimer = ref(null)
-const userInfo = ref(null)
-
+const renderReady = ref(false)
 const dashboardActive = computed(() => {
   return dvInfo.value.type === 'dashboard'
 })
 
+const curSearchCount = computed(() => {
+  return outerSearchCount.value + searchCount.value
+})
 // 大屏是否保持宽高比例 非全屏 full 都需要保持宽高比例
 const dataVKeepRadio = computed(() => {
-  return canvasStyleData.value.screenAdaptor !== 'full'
+  return canvasStyleData.value?.screenAdaptor !== 'full'
 })
 const isReport = computed(() => {
   return !!router.currentRoute.value.query?.report
@@ -112,10 +122,13 @@ const popComponentData = computed(() =>
 )
 
 const baseComponentData = computed(() =>
-  componentData.value.filter(ele => ele.category !== 'hidden' && ele.component !== 'GroupArea')
+  componentData.value.filter(ele => ele?.category !== 'hidden' && ele.component !== 'GroupArea')
 )
 const canvasStyle = computed(() => {
   let style = {}
+  if (isMainCanvas(canvasId.value) && !isDashboard()) {
+    style['overflowY'] = 'hidden !important'
+  }
   if (canvasStyleData.value && canvasStyleData.value.width && isMainCanvas(canvasId.value)) {
     style = {
       ...getCanvasStyle(canvasStyleData.value),
@@ -134,9 +147,6 @@ const canvasStyle = computed(() => {
         : '100%'
   } else if (!isMainCanvas(canvasId.value)) {
     style['height'] = '100%'
-  }
-  if (!dashboardActive.value) {
-    style['overflow-y'] = 'hidden'
   }
   return style
 })
@@ -178,6 +188,24 @@ useEmitt({
 })
 
 let isFirst =true
+useEmitt({
+  name: 'componentRefresh',
+  callback: function () {
+    if (isMainCanvas(canvasId.value)) {
+      refreshDataV()
+    }
+  }
+})
+
+useEmitt({
+  name: 'canvasFullscreen',
+  callback: function () {
+    if (isMainCanvas(canvasId.value)) {
+      fullScreeRef.value.toggleFullscreen()
+    }
+  }
+})
+
 const resetLayout = () => {
   if (downloadStatus.value) {
     return
@@ -207,14 +235,18 @@ const resetLayout = () => {
           : outerScale.value * 100
       } else {
         // 需要保持宽高比例时 高度伸缩和宽度伸缩保持一致 否则 高度伸缩单独计算
+        // tip 当当前画布是tab时 使用的事 outerScale.value 因为 canvasStyleData.value为 {} 此处取数逻辑需进一步优化
         const scaleMinHeight = dataVKeepRadio.value ? scaleMin.value : scaleHeightPoint.value
         changeRefComponentsSizeWithScalePoint(
           baseComponentData.value,
           canvasStyleData.value,
-          scaleMin.value,
-          scaleMinHeight
+          scaleMin.value || outerScale.value * 100,
+          scaleMinHeight || outerScale.value * 100
         )
+        scaleMin.value = isMainCanvas(canvasId.value) ? scaleMin.value : outerScale.value * 100
       }
+      renderReady.value = true
+      emits('onResetLayout')
     }
   })
 }
@@ -235,8 +267,8 @@ const getShapeItemShowStyle = item => {
 }
 
 const curGap = computed(() => {
-  return dashboardActive.value && canvasStyleData.value.dashboard.gap === 'yes'
-    ? canvasStyleData.value.dashboard.gapSize
+  return dashboardActive.value && dvMainStore.canvasStyleData.dashboard?.gap === 'yes'
+    ? dvMainStore.canvasStyleData?.dashboard?.gapSize
     : 0
 })
 
@@ -275,7 +307,8 @@ const winMsgHandle = event => {
   if (
     msgInfo &&
     msgInfo.type === 'attachParams' &&
-    msgInfo.targetSourceId === dvInfo.value.id + ''
+    msgInfo.targetSourceId === dvInfo.value.id + '' &&
+    isMainCanvas(canvasId.value)
   ) {
     const attachParams = msgInfo.params
     if (attachParams) {
@@ -351,7 +384,11 @@ const popAreaAvailable = computed(
 )
 
 const filterBtnShow = computed(
-  () => popAreaAvailable.value && popComponentData.value && popComponentData.value.length > 0
+  () =>
+    popAreaAvailable.value &&
+    popComponentData.value &&
+    popComponentData.value.length > 0 &&
+    canvasStyleData.value.popupButtonAvailable
 )
 const datasetParamsInit = item => {
   customDatasetParamsRef.value?.optInit(item)
@@ -369,6 +406,9 @@ const isShow = item => {
   return true
 }
 
+const dataVPreview = computed(
+  () => dvInfo.value.type === 'dataV' && canvasId.value === 'canvas-main'
+)
 defineExpose({
   restore
 })
@@ -379,7 +419,7 @@ defineExpose({
     :id="domId"
     class="canvas-container"
     :style="canvasStyle"
-    :class="{ 'de-download-custom': downloadStatus }"
+    :class="{ 'de-download-custom': downloadStatus, 'datav-preview': dataVPreview }"
     ref="previewCanvas"
     @mousedown="handleMouseDown"
   >
@@ -402,28 +442,31 @@ defineExpose({
       :canvas-style-data="canvasStyleData"
       :component-data="baseComponentData"
     ></canvas-opt-bar>
-    <ComponentWrapper
-      v-for="(item, index) in baseComponentData"
-      v-show="isShow(item)"
-      :active="item.id === (curComponent || {})['id']"
-      :canvas-id="canvasId"
-      :canvas-style-data="canvasStyleData"
-      :dv-info="dvInfo"
-      :canvas-view-info="canvasViewInfo"
-      :view-info="canvasViewInfo[item.id]"
-      :key="index"
-      :config="item"
-      :style="getShapeItemShowStyle(item)"
-      :show-position="showPosition"
-      :search-count="searchCount"
-      :scale="mobileInPc ? 100 : scaleMin"
-      :is-selector="props.isSelector"
-      @userViewEnlargeOpen="userViewEnlargeOpen($event, item)"
-      @datasetParamsInit="datasetParamsInit(item)"
-      @onPointClick="onPointClick"
-    />
+    <template v-if="renderReady">
+      <ComponentWrapper
+        v-for="(item, index) in baseComponentData"
+        v-show="isShow(item)"
+        :active="item.id === (curComponent || {})['id']"
+        :canvas-id="canvasId"
+        :canvas-style-data="canvasStyleData"
+        :dv-info="dvInfo"
+        :canvas-view-info="canvasViewInfo"
+        :view-info="canvasViewInfo[item.id]"
+        :key="index"
+        :config="item"
+        :style="getShapeItemShowStyle(item)"
+        :show-position="showPosition"
+        :search-count="searchCount"
+        :scale="mobileInPc ? 100 : scaleMin"
+        :is-selector="props.isSelector"
+        @userViewEnlargeOpen="userViewEnlargeOpen($event, item)"
+        @datasetParamsInit="datasetParamsInit(item)"
+        @onPointClick="onPointClick"
+      />
+    </template>
     <user-view-enlarge ref="userViewEnlargeRef"></user-view-enlarge>
   </div>
+  <de-fullscreen ref="fullScreeRef"></de-fullscreen>
   <dataset-params-component ref="customDatasetParamsRef"></dataset-params-component>
   <XpackComponent ref="openHandler" jsname="L2NvbXBvbmVudC9lbWJlZGRlZC1pZnJhbWUvT3BlbkhhbmRsZXI=" />
 </template>
@@ -448,5 +491,9 @@ defineExpose({
 
 .fix-button {
   position: fixed !important;
+}
+
+.datav-preview {
+  overflow-y: hidden !important;
 }
 </style>

@@ -15,7 +15,6 @@ const { t } = useI18n()
 
 export class ProgressBar extends G2PlotChartView<BarOptions, G2Progress> {
   axisConfig = {
-    ...this['axisConfig'],
     xAxis: {
       name: `${t('chart.form_type')} / ${t('chart.dimension')}`,
       type: 'd',
@@ -34,6 +33,7 @@ export class ProgressBar extends G2PlotChartView<BarOptions, G2Progress> {
   }
   properties: EditorProperty[] = [
     'background-overall-component',
+    'border-style',
     'basic-style-selector',
     'label-selector',
     'tooltip-selector',
@@ -47,7 +47,8 @@ export class ProgressBar extends G2PlotChartView<BarOptions, G2Progress> {
     ...BAR_EDITOR_PROPERTY_INNER,
     'legend-selector': null,
     'background-overall-component': ['all'],
-    'basic-style-selector': ['colors', 'alpha', 'gradient'],
+    'border-style': ['all'],
+    'basic-style-selector': ['colors', 'alpha', 'gradient', 'radiusColumnBar'],
     'label-selector': ['hPosition', 'color', 'fontSize'],
     'tooltip-selector': ['fontSize', 'color', 'backgroundColor', 'tooltipFormatter', 'show'],
     'y-axis-selector': ['name', 'color', 'fontSize', 'axisForm', 'axisLabel', 'position'],

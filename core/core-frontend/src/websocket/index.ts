@@ -36,11 +36,14 @@ export default {
       if (window.DataEaseBi?.baseUrl) {
         prefix = window.DataEaseBi.baseUrl
       } else {
-        const href = window.location.href
-        prefix = href.substring(0, href.indexOf('#'))
+        // const href = window.location.href
+        prefix = location.origin + location.pathname
         if (env.MODE === 'dev') {
           prefix = dev.server.proxy[basePath].target + '/'
         }
+      }
+      if (!prefix.endsWith('/')) {
+        prefix += '/'
       }
       const socket = new SockJS(prefix + 'websocket?userId=' + wsCache.get('user.uid'))
       stompClient = Stomp.over(socket)
@@ -57,7 +60,7 @@ export default {
           })
         },
         error => {
-          console.log('连接失败: ' + error)
+          console.error('连接失败: ' + error)
         }
       )
     }
@@ -66,10 +69,10 @@ export default {
       if (stompClient && stompClient.connected) {
         stompClient.disconnect(
           function () {
-            console.log('断开连接')
+            console.info('断开连接')
           },
           function (error) {
-            console.log('断开连接失败: ' + error)
+            console.info('断开连接失败: ' + error)
           }
         )
       }

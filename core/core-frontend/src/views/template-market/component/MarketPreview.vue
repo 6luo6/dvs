@@ -56,7 +56,9 @@
           />
           <el-row v-show="!state.hasResult" class="custom-position">
             <div style="text-align: center">
-              <Icon name="no_result" style="margin-bottom: 16px; font-size: 75px"></Icon>
+              <Icon name="no_result"
+                ><no_result style="margin-bottom: 16px; font-size: 75px" class="svg-icon"
+              /></Icon>
               <br />
               <span>{{ t('commons.no_result') }}</span>
             </div>
@@ -89,6 +91,7 @@
 </template>
 
 <script setup lang="ts">
+import no_result from '@/assets/svg/no_result.svg'
 import { searchMarket, getCategories } from '@/api/templateMarket'
 import { onMounted, reactive, watch } from 'vue'
 import { useI18n } from '@/hooks/web/useI18n'
@@ -356,7 +359,7 @@ onMounted(() => {
 .insert-filter {
   display: inline-block;
   font-weight: 400 !important;
-  font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+  font-family: var(--de-custom_font, 'PingFang');
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
@@ -385,7 +388,7 @@ onMounted(() => {
 .insert {
   display: inline-block;
   font-weight: 400 !important;
-  font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+  font-family: var(--de-custom_font, 'PingFang');
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;

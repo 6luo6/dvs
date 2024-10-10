@@ -1,5 +1,6 @@
 declare type EditorProperty =
   | 'background-overall-component'
+  | 'border-style'
   | 'basic-style-selector'
   | 'dual-basic-style-selector'
   | 'label-selector'
@@ -56,7 +57,7 @@ declare type AxisType =
   | 'area'
   | 'flowMapStartName'
   | 'flowMapEndName'
-  | 'flowMapColor'
+  | 'extColor'
 /**
  * 轴配置
  */
@@ -87,6 +88,10 @@ declare type AxisSpec = {
    * 轴提示
    */
   tooltip?: string
+  /**
+   * 允许为空
+   */
+  allowEmpty?: boolean
 }
 /**
  * 图表编辑表单

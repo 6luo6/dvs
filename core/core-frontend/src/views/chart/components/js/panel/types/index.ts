@@ -16,7 +16,8 @@ export enum ChartLibraryType {
   S2 = 's2',
   RICH_TEXT = 'rich-text',
   INDICATOR = 'indicator',
-  TextIndicator = 'textIndicator'
+  TextIndicator = 'textIndicator',
+  PICTURE_GROUP = 'picture-group'
 }
 export abstract class ChartWrapper<O> {
   chartInstance: O
@@ -80,22 +81,26 @@ export abstract class AntVAbstractChartView extends AbstractChartView {
   axisConfig: AxisConfig = {
     xAxis: {
       name: `${t('chart.drag_block_type_axis')} / ${t('chart.dimension')}`,
-      type: 'd'
+      type: 'd',
+      allowEmpty: true
     },
     xAxisExt: {
       name: `${t('chart.chart_group')} / ${t('chart.dimension')}`,
       type: 'd',
-      limit: 1
+      limit: 1,
+      allowEmpty: true
     },
     extStack: {
       name: `${t('chart.stack_item')} / ${t('chart.dimension')}`,
       type: 'd',
-      limit: 1
+      limit: 1,
+      allowEmpty: true
     },
     yAxis: {
       name: `${t('chart.drag_block_value_axis')} / ${t('chart.quota')}`,
       type: 'q',
-      limit: 1
+      limit: 1,
+      allowEmpty: true
     }
   }
   selectorSpec: EditorSelectorSpec = {

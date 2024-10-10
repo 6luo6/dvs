@@ -9,6 +9,7 @@ import io.dataease.chart.constant.ChartConstants;
 import io.dataease.chart.manage.ChartDataManage;
 import io.dataease.constant.AuthConstant;
 import io.dataease.constant.CommonConstants;
+import io.dataease.dataset.manage.PermissionManage;
 import io.dataease.dataset.server.DatasetFieldServer;
 import io.dataease.engine.constant.DeTypeConstants;
 import io.dataease.exception.DEException;
@@ -16,6 +17,7 @@ import io.dataease.exportCenter.manage.ExportCenterManage;
 import io.dataease.extensions.datasource.dto.DatasetTableFieldDTO;
 import io.dataease.extensions.view.dto.ChartViewDTO;
 import io.dataease.extensions.view.dto.ChartViewFieldDTO;
+import io.dataease.license.manage.F2CLicLimitedManage;
 import io.dataease.result.ResultCode;
 import io.dataease.utils.JsonUtil;
 import io.dataease.utils.LogUtil;
@@ -36,9 +38,13 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.io.OutputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @Author Junjun
@@ -53,11 +59,19 @@ public class ChartDataServer implements ChartDataApi {
 
     @Resource
     private VisualizationTemplateExtendDataManage extendDataManage;
-    @Value("${export.views.limit:500000}")
+    @Value("${dataease.export.views.limit:100000}")
     private Integer limit;
-
+    @Resource
+    private PermissionManage permissionManage;
     @Resource
     private DatasetFieldServer datasetFieldServer;
+
+    @Resource(name = "f2CLicLimitedManage")
+    private F2CLicLimitedManage f2CLicLimitedManage;
+
+    private Integer getExportLimit() {
+        return Math.toIntExact(Math.min(f2CLicLimitedManage.checkDatasetLimit(), limit));
+    }
 
     @Override
     public ChartViewDTO getData(ChartViewDTO chartViewDTO) throws Exception {
@@ -84,21 +98,24 @@ public class ChartDataServer implements ChartDataApi {
             if ("dataset".equals(request.getDownloadType())) {
                 viewDTO.setType("table-info");
                 List<DatasetTableFieldDTO> sourceFields = datasetFieldServer.listByDatasetGroup(viewDTO.getTableId());
+                List<String> fileNames = permissionManage.filterColumnPermissions(sourceFields, new HashMap<>(), viewDTO.getTableId(), null).stream().map(DatasetTableFieldDTO::getDataeaseName).collect(Collectors.toList());
+                sourceFields = sourceFields.stream().filter(datasetTableFieldDTO -> fileNames.contains(datasetTableFieldDTO.getDataeaseName())).collect(Collectors.toList());
                 dsHeader = sourceFields.stream()
                         .map(DatasetTableFieldDTO::getName)
                         .toArray(String[]::new);
                 dsTypes = sourceFields.stream()
                         .map(DatasetTableFieldDTO::getDeType)
                         .toArray(Integer[]::new);
-                TypeReference<List<ChartViewFieldDTO>> listTypeReference = new TypeReference<List<ChartViewFieldDTO>>(){
+                TypeReference<List<ChartViewFieldDTO>> listTypeReference = new TypeReference<List<ChartViewFieldDTO>>() {
                 };
-                viewDTO.setXAxis(JsonUtil.parseList(JsonUtil.toJSONString(sourceFields).toString(),listTypeReference));
+                viewDTO.setXAxis(JsonUtil.parseList(JsonUtil.toJSONString(sourceFields).toString(), listTypeReference));
             }
+            Integer curLimit = getExportLimit();
             if (ChartConstants.VIEW_RESULT_MODE.CUSTOM.equals(viewDTO.getResultMode())) {
                 Integer limitCount = viewDTO.getResultCount();
-                viewDTO.setResultCount(limitCount > limit ? limit : limitCount);
+                viewDTO.setResultCount(Math.min(curLimit, limitCount));
             } else {
-                viewDTO.setResultCount(limit);
+                viewDTO.setResultCount(curLimit);
             }
             ChartViewDTO chartViewInfo = getData(viewDTO);
             List<Object[]> tableRow = (List) chartViewInfo.getData().get("sourceData");
@@ -169,7 +186,7 @@ public class ChartDataServer implements ChartDataApi {
 
                 response.setContentType("application/vnd.ms-excel");
                 //文件名称
-                response.setHeader("Content-disposition", "attachment;filename=" + request.getViewName() + ".xlsx");
+                response.setHeader("Content-disposition", "attachment;filename=" + URLEncoder.encode(request.getViewName(), StandardCharsets.UTF_8) + ".xlsx");
                 wb.write(outputStream);
                 outputStream.flush();
                 outputStream.close();
@@ -269,12 +286,7 @@ public class ChartDataServer implements ChartDataApi {
                             detailsSheet.setColumnWidth(j, 255 * 20);
                         } else if (cellValObj != null) {
                             try {
-                                // with DataType
-                                if ((excelTypes[j].equals(DeTypeConstants.DE_INT) || excelTypes[j].equals(DeTypeConstants.DE_FLOAT)) && StringUtils.isNotEmpty(cellValObj.toString())) {
-                                    cell.setCellValue(Double.valueOf(cellValObj.toString()));
-                                } else {
-                                    cell.setCellValue(cellValObj.toString());
-                                }
+                                cell.setCellValue(cellValObj.toString());
                             } catch (Exception e) {
                                 LogUtil.warn("export excel data transform error");
                             }

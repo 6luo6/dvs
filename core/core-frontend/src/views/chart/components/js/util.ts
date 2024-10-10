@@ -510,12 +510,19 @@ export const exportExcelDownload = (chart, callBack?) => {
       ...request,
       multiInfo: [req1, req2]
     }
+    if (chart.downloadType === 'dataset') {
+      delete request.multiInfo
+    }
   } else {
     const req = getExcelDownloadRequest(chart.data)
     request = {
       ...request,
       ...req
     }
+  }
+
+  if (chart.type.includes('symbolic-map')) {
+    request.detailFields = []
   }
 
   const linkStore = useLinkStoreWithOut()
@@ -609,25 +616,49 @@ export const filterChartDataByRange = (data: any[], maxValue: number, minValue: 
 }
 
 /**
- * 获取地图默认最大最小值根据数据
+ * 获取数据最大最小值
  * @param data
+ * @param field 值字段
  * @param maxValue
  * @param minValue
  * @param callback
  */
-export const setMapChartDefaultMaxAndMinValueByData = (
+export const getMaxAndMinValueByData = (
   data: any[],
+  field: string,
   maxValue: number,
   minValue: number,
   callback: (max: number, min: number) => void
 ) => {
+  // 定义一个辅助函数来计算最大值或最小值
+  const calculateExtreme = (isMax: boolean) => {
+    return data.reduce(
+      (extreme, current) => {
+        return isMax
+          ? current[field] > extreme
+            ? current[field]
+            : extreme
+          : current[field] < extreme
+          ? current[field]
+          : extreme
+      },
+      isMax ? Number.MIN_SAFE_INTEGER : Number.MAX_SAFE_INTEGER
+    )
+  }
+  if (minValue === null || maxValue === null) {
+    let maxResult = maxValue
+    let minResult = minValue
+    if (maxResult === null) {
+      maxResult = calculateExtreme(true)
+    }
+    if (minResult === null) {
+      minResult = calculateExtreme(false)
+    }
+    callback(maxResult, minResult)
+  }
   if (minValue === 0 && maxValue === 0) {
-    const maxResult = data.reduce((max, current) => {
-      return current.value > max ? current.value : max
-    }, Number.MIN_SAFE_INTEGER)
-    const minResult = data.reduce((min, current) => {
-      return current.value < min ? current.value : min
-    }, Number.MAX_SAFE_INTEGER)
+    const maxResult = calculateExtreme(true)
+    const minResult = calculateExtreme(false)
     callback(maxResult, minResult)
   }
 }
@@ -674,7 +705,10 @@ export const stepsColor = (start, end, steps, gamma) => {
 export const getMapColorCases = colorCases => {
   const cloneColorCases = JSON.parse(JSON.stringify(colorCases))
   return cloneColorCases.map(colorItem => {
-    const curColors = colorItem.colors
+    let curColors = colorItem.colors
+    if (['fresh', 'red', 'spiritual'].includes(colorItem.value)) {
+      curColors = colorItem.colors.reverse()
+    }
     const len = curColors.length
     const start = curColors[0]
     const end = curColors[len - 1]
@@ -1361,6 +1395,30 @@ export function isAlphaColor(color: string): boolean {
   }
   if (color.startsWith('rgb')) {
     return color.split(',').length === 4
+  }
+  return false
+}
+
+export function isTransparent(color: string): boolean {
+  if (!color?.trim()) {
+    return true
+  }
+  if (color.startsWith('#')) {
+    const tmp = color.substring(1, color.length)
+    if (tmp.length === 3 || tmp.length === 6) {
+      return false
+    }
+    if (tmp.length === 8) {
+      return tmp.substring(6, 8) === '00'
+    }
+  }
+  if (color.startsWith('rgb')) {
+    const tmp = color.split(',')
+    if (tmp.length !== 4) {
+      return false
+    }
+    const alpha = tmp[3].substring(0, tmp[3].length - 1)
+    return alpha.trim() === '0'
   }
   return false
 }

@@ -292,6 +292,8 @@ export default {
       option: 'Option',
       form_setting: 'Form Setting',
       input_limit_50: 'No more than 50 characters',
+      input_limit_max: 'No more than {0} characters',
+      input_limit_min: 'No less than {0} characters',
       confirm_delete: 'Confirm delete? (The tables created in database will not be deleted)',
       list: 'Form List',
       record: 'Fill Record',
@@ -363,7 +365,11 @@ export default {
       please_insert_end: 'End Time Column Name',
       save_form: 'Save Form',
       default: 'default',
-      default_built_in: 'Built-in Database'
+      default_built_in: 'Built-in Database',
+      lt_check: 'need less than {0}',
+      gt_check: 'need greater than {0}',
+      le_check: 'need less than or equal to {0}',
+      ge_check: 'need greater than or equal to {0}'
     },
     database: {
       nvarchar: 'Nvarchar',
@@ -376,6 +382,8 @@ export default {
       commit_time: 'Commit Time',
       confirm_delete: 'Confirm delete?',
       add_data: 'Add Data',
+      batch_upload: 'Upload Data',
+      download: 'Download Data',
       download_template: 'Download Template',
       insert_data: 'Insert Data',
       update_data: 'Update Data',
@@ -388,11 +396,15 @@ export default {
       data_not_found: '] Not Found'
     },
     task: {
+      finish_rate_hint: 'Finished Rate = Finished Task Count / Assigned Task Count * 100%',
       distribute_frequency: 'Distribute Frequency',
       one_time: 'One Time',
       interval: 'Interval',
       distribute_setting: 'Distribute Setting',
       task_distribute_setting: 'Task Distribute Setting',
+      form_template_setting: 'From Template Setting',
+      template_setting: 'Template Setting',
+      component: 'Component Name',
       receive_object: 'Receive Object',
       receive_fit_column: 'Receive Fit Column',
       receiver: 'Receiver',
@@ -438,7 +450,7 @@ export default {
       assigned_task: 'Assigned Task',
       task_finish_in: 'Task Finished in ',
       task_finish_in_suffix: '',
-      open_sub_task: 'Open Sub Tasks'
+      open_sub_task: 'Open Assigned Tasks'
     },
     on_the_left: 'Please select a form on the left',
     search_by_commit_name: 'Search by operator name'

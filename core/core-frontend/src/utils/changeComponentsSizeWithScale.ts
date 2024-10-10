@@ -7,9 +7,17 @@ import { groupSizeStyleAdaptor } from '@/utils/style'
 const dvMainStore = dvMainStoreWithOut()
 const { componentData, curComponentIndex, canvasStyleData } = storeToRefs(dvMainStore)
 
-const needToChangeAttrs = ['top', 'left', 'width', 'height', 'fontSize', 'letterSpacing']
+const needToChangeAttrs = [
+  'top',
+  'left',
+  'width',
+  'height',
+  'fontSize',
+  'activeFontSize',
+  'letterSpacing'
+]
 const needToChangeDirectionAttrs = {
-  width: ['left', 'width', 'fontSize', 'letterSpacing'],
+  width: ['left', 'width', 'fontSize', 'activeFontSize', 'letterSpacing'],
   height: ['top', 'height']
 }
 
@@ -17,34 +25,36 @@ export function changeSizeWithScale(scale) {
   return changeComponentsSizeWithScale(scale)
 }
 
-export function changeSizeWithDirectionScale(scale, direction) {
-  return changeComponentsSizeWithScale(scale, needToChangeDirectionAttrs[direction])
-}
-
-export function changeComponentsSizeWithScale(scale, changeAttrs = needToChangeAttrs) {
+export function changeComponentsSizeWithScale(scale) {
   const componentDataCopy = deepCopy(componentData.value)
   componentDataCopy.forEach(component => {
     Object.keys(component.style).forEach(key => {
-      if (changeAttrs.includes(key)) {
-        if (key === 'fontSize' && component.style[key] === '') return
+      if (needToChangeDirectionAttrs.width.includes(key)) {
         // 根据原来的比例获取样式原来的尺寸
         // 再用原来的尺寸 * 现在的比例得出新的尺寸
         component.style[key] = format(
           getOriginStyle(component.style[key], canvasStyleData.value.scale),
           scale
         )
-        // 如果是分组组件 则要进行分组内部组件groupStyle进行深度计算
-        // 计算逻辑 Group 中样式 * groupComponent.groupStyle[sonKey].
-        if (component.component === 'Group') {
-          try {
-            groupSizeStyleAdaptor(component)
-          } catch (e) {
-            // 旧Group适配
-            console.error('group adaptor error:' + e)
-          }
-        }
+      } else if (needToChangeDirectionAttrs.height.includes(key)) {
+        // 根据原来的比例获取样式原来的尺寸
+        // 再用原来的尺寸 * 现在的比例得出新的尺寸
+        component.style[key] = format(
+          getOriginStyle(component.style[key], canvasStyleData.value.scaleHeight),
+          scale
+        )
       }
     })
+    // 如果是分组组件 则要进行分组内部组件groupStyle进行深度计算
+    // 计算逻辑 Group 中样式 * groupComponent.groupStyle[sonKey].
+    if (['Group', 'DeTabs'].includes(component.component)) {
+      try {
+        groupSizeStyleAdaptor(component)
+      } catch (e) {
+        // 旧Group适配
+        console.error('group adaptor error:' + e)
+      }
+    }
   })
 
   dvMainStore.setComponentData(componentDataCopy)

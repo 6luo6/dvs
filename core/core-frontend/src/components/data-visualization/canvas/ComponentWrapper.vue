@@ -24,6 +24,20 @@ function jumpClick(elementInfo) {
 }
 const downLoading = ref(false)
 
+const commonFilterAttrs = ['width', 'height', 'top', 'left', 'rotate']
+const commonFilterAttrsFilterBorder = [
+  'width',
+  'height',
+  'top',
+  'left',
+  'rotate',
+  'borderActive',
+  'borderWidth',
+  'borderRadius',
+  'borderStyle',
+  'borderColor'
+]
+
 const props = defineProps({
   active: {
     type: Boolean,
@@ -150,12 +164,12 @@ const onClick = e => {
 
 const getComponentStyleDefault = item => {
   if (config.value.component.includes('Svg')) {
-    return getStyle(item.style, ['top', 'left', 'width', 'height', 'rotate', 'backgroundColor'])
+    return getStyle(item.style, ['top', 'left', 'width', 'height', 'rotate', 'backgroundColor', 'borderWidth', 'borderStyle', 'borderColor'])
   } else {
     if (item.activeChange && item.activeChange.isActive) {
-      return getStyle(item.activeChange.style, ['top', 'left', 'width', 'height', 'rotate'])
+      return getStyle(item.activeChange.style, ['top', 'left', 'width', 'height', 'rotate', 'backgroundColor', 'borderWidth', 'borderStyle', 'borderColor'])
     } else {
-      return getStyle(item.style, ['top', 'left', 'width', 'height', 'rotate'])
+      return getStyle(item.style, item.style.borderActive ? commonFilterAttrs : commonFilterAttrsFilterBorder)
     }
   }
 }
@@ -185,7 +199,7 @@ const componentBackgroundStyle = computed(() => {
     if (backgroundColorSelect && backgroundColor) {
       colorRGBA = backgroundColor
     }
-    if (backgroundImageEnable) {
+    if (backgroundImageEnable || (config.value.innerType === 'VQuery' && backgroundColorSelect)) {
       if (backgroundType === 'outerImage' && typeof outerImage === 'string') {
         style['background'] = `url(${imgUrlTrans(outerImage)}) no-repeat ${colorRGBA}`
       } else {
@@ -215,18 +229,47 @@ const commonBackgroundSvgInner = computed(() => {
   }
 })
 
+const slotStyle = computed(() => {
+  // 3d效果支持
+  if (config.value['multiDimensional'] && config.value['multiDimensional']?.enable) {
+    const width = config.value.style.width // 原始元素宽度
+    const height = config.value.style.height // 原始元素高度
+    const rotateX = config.value['multiDimensional'].x // 旋转X角度
+    const rotateY = config.value['multiDimensional'].y // 旋转Y角度
+
+    // 将角度转换为弧度
+    const radX = (rotateX * Math.PI) / 180
+    const radY = (rotateY * Math.PI) / 180
+
+    // 计算旋转后新宽度和高度
+    const newWidth = Math.abs(width * Math.cos(radY)) + Math.abs(height * Math.sin(radX))
+    const newHeight = Math.abs(height * Math.cos(radX)) + Math.abs(width * Math.sin(radY))
+
+    // 计算需要的 padding
+    const paddingX = (newWidth - width) / 2
+    const paddingY = (newHeight - height) / 2
+    return {
+      padding: `${paddingY}px ${paddingX}px`,
+      transform: `rotateX(${config.value['multiDimensional'].x}deg) rotateY(${config.value['multiDimensional'].y}deg) rotateZ(${config.value['multiDimensional'].z}deg)`
+    }
+  } else {
+    return {}
+  }
+})
+
 const onPointClick = param => {
   emits('onPointClick', param)
 }
 
 const eventEnable = computed(
   () =>
-    ['Picture', 'CanvasIcon', 'CircleShape', 'SvgTriangle', 'RectShape', 'ScrollText'].includes(
+    showPosition.value.includes('preview') &&
+    (['Picture', 'CanvasIcon', 'CircleShape', 'SvgTriangle', 'RectShape', 'ScrollText'].includes(
       config.value.component
     ) ||
-    (['indicator', 'rich-text'].includes(config.value.innerType) &&
-      config.value.events &&
-      config.value.events.checked)
+      ['indicator', 'rich-text'].includes(config.value.innerType)) &&
+    config.value.events &&
+    config.value.events.checked
 )
 
 const onWrapperClick = e => {
@@ -237,15 +280,45 @@ const onWrapperClick = e => {
         dvMainStore.popAreaActiveSwitch()
       })
     } else if (config.value.events.type === 'jump') {
-      window.open(config.value.events.jump.value, '_blank')
+      const url = config.value.events.jump.value
+      const jumpType = config.value.events.jump.type
+      try {
+        let newWindow
+        if ('newPop' === jumpType) {
+          window.open(
+            url,
+            '_blank',
+            'width=800,height=600,left=200,top=100,toolbar=no,scrollbars=yes,resizable=yes,location=no'
+          )
+        } else {
+          newWindow = window.open(url, jumpType)
+        }
+        initOpenHandler(newWindow)
+      } catch (e) {
+        console.warn('url 格式错误:' + url)
+      }
     } else if (config.value.events.type === 'refreshDataV') {
       useEmitt().emitter.emit('componentRefresh')
+    } else if (config.value.events.type === 'fullScreen') {
+      useEmitt().emitter.emit('canvasFullscreen')
+    } else if (config.value.events.type === 'download') {
+      useEmitt().emitter.emit('canvasDownload')
     }
     e.preventDefault()
     e.stopPropagation()
   }
 }
 
+const openHandler = ref(null)
+const initOpenHandler = newWindow => {
+  if (openHandler?.value) {
+    const pm = {
+      methodName: 'initOpenHandler',
+      args: newWindow
+    }
+    openHandler.value.invokeMethod(pm)
+  }
+}
 const deepScale = computed(() => scale.value / 100)
 </script>
 
@@ -261,7 +334,7 @@ const deepScale = computed(() => scale.value / 100)
     element-loading-background="rgba(255, 255, 255, 1)"
   >
     <component-edit-bar
-      v-if="!showPosition.includes('canvas') && dvInfo.type === 'dashboard' && !props.isSelector"
+      v-if="!showPosition.includes('canvas') && !props.isSelector"
       class="wrapper-edit-bar"
       ref="componentEditBarRef"
       :canvas-id="canvasId"

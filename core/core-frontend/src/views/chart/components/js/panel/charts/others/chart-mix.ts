@@ -45,7 +45,10 @@ export class ColumnLineMix extends G2PlotChartView<DualAxesOptions, DualAxes> {
   }
   axis: AxisType[] = [...CHART_MIX_AXIS_TYPE, 'xAxisExtRight', 'yAxisExt']
   axisConfig = {
-    ...this['axisConfig'],
+    xAxis: {
+      name: `${t('chart.drag_block_type_axis')} / ${t('chart.dimension')}`,
+      type: 'd'
+    },
     yAxis: {
       name: `${t('chart.drag_block_value_axis_left')} / ${t('chart.column_quota')}`,
       limit: 1,
@@ -55,14 +58,24 @@ export class ColumnLineMix extends G2PlotChartView<DualAxesOptions, DualAxes> {
       //用这个字段存放右轴分类
       name: `${t('chart.drag_block_type_axis_right')} / ${t('chart.dimension')}`,
       limit: 1,
-      type: 'd'
+      type: 'd',
+      allowEmpty: true
     },
     yAxisExt: {
       name: `${t('chart.drag_block_value_axis_right')} / ${t('chart.line_quota')}`,
       limit: 1,
-      type: 'q'
+      type: 'q',
+      allowEmpty: true
     }
   }
+
+  protected getLeftType(): string {
+    return 'column'
+  }
+  protected getRightType(): string {
+    return 'line'
+  }
+
   async drawChart(drawOptions: G2PlotDrawOptions<DualAxes>): Promise<DualAxes> {
     const { chart, action, container } = drawOptions
     if (!chart.data?.left?.data?.length && !chart.data?.right?.data?.length) {
@@ -73,8 +86,8 @@ export class ColumnLineMix extends G2PlotChartView<DualAxesOptions, DualAxes> {
 
     // const data1Type = (left[0]?.type === 'bar' ? 'column' : left[0]?.type) ?? 'column'
     // const data2Type = (right[0]?.type === 'bar' ? 'column' : right[0]?.type) ?? 'column'
-    const data1Type = 'column'
-    const data2Type = 'line'
+    const data1Type = this.getLeftType()
+    const data2Type = this.getRightType()
 
     const isGroup = this.name === 'chart-mix-group' && chart.xAxisExt?.length > 0
     const isStack = this.name === 'chart-mix-stack' && chart.extStack?.length > 0
@@ -222,14 +235,31 @@ export class ColumnLineMix extends G2PlotChartView<DualAxesOptions, DualAxes> {
   protected configBasicStyle(chart: Chart, options: DualAxesOptions): DualAxesOptions {
     // size
     const customAttr: DeepPartial<ChartAttr> = parseJson(chart.customAttr)
-    const s = JSON.parse(JSON.stringify(customAttr.basicStyle))
+    const s = defaultsDeep(
+      JSON.parse(JSON.stringify(customAttr.basicStyle)),
+      CHART_MIX_DEFAULT_BASIC_STYLE
+    )
     const smooth = s.lineSmooth
     const point = {
       size: s.lineSymbolSize,
-      shape: s.lineSymbol
+      shape: s.lineSymbol,
+      style: {
+        stroke: hexColorToRGBA('#FFFFFF', s.subAlpha)
+      }
     }
     const lineStyle = {
       lineWidth: s.lineWidth
+    }
+    const leftSmooth = s.leftLineSmooth
+    const leftPoint = {
+      size: s.leftLineSymbolSize,
+      shape: s.leftLineSymbol,
+      style: {
+        stroke: hexColorToRGBA('#FFFFFF', s.alpha)
+      }
+    }
+    const leftLineStyle = {
+      lineWidth: s.leftLineWidth
     }
     const tempOption = {
       ...options,
@@ -238,9 +268,9 @@ export class ColumnLineMix extends G2PlotChartView<DualAxesOptions, DualAxes> {
       lineStyle
     }
     if (tempOption.geometryOptions) {
-      tempOption.geometryOptions[0].smooth = smooth
-      tempOption.geometryOptions[0].point = point
-      tempOption.geometryOptions[0].lineStyle = lineStyle
+      tempOption.geometryOptions[0].smooth = leftSmooth
+      tempOption.geometryOptions[0].point = leftPoint
+      tempOption.geometryOptions[0].lineStyle = leftLineStyle
 
       tempOption.geometryOptions[1].smooth = smooth
       tempOption.geometryOptions[1].point = point
@@ -279,6 +309,25 @@ export class ColumnLineMix extends G2PlotChartView<DualAxesOptions, DualAxes> {
       ...options
     }
     const basicStyle = parseJson(chart.customAttr).basicStyle as MixChartBasicStyle
+
+    const { seriesColor } = basicStyle
+    if (seriesColor?.length) {
+      const seriesMap = seriesColor.reduce((p, n) => {
+        p[n.id] = n
+        return p
+      }, {})
+      const { yAxis } = chart
+      yAxis?.forEach((axis, index) => {
+        const curAxisColor = seriesMap[axis.id]
+        if (curAxisColor) {
+          if (index + 1 > basicStyle.colors.length) {
+            basicStyle.colors.push(curAxisColor.color)
+          } else {
+            basicStyle.colors[index] = curAxisColor.color
+          }
+        }
+      })
+    }
     //左轴
     const color = basicStyle.colors.map(ele => {
       const tmp = hexColorToRGBA(ele, basicStyle.alpha)
@@ -349,7 +398,7 @@ export class ColumnLineMix extends G2PlotChartView<DualAxesOptions, DualAxes> {
   public setupSubSeriesColor(chart: ChartObj, data?: any[]): ChartBasicStyle['seriesColor'] {
     const result: ChartBasicStyle['seriesColor'] = []
     const seriesSet = new Set<string>()
-    const colors = chart.customAttr.basicStyle.subColors ?? chart.customAttr.basicStyle.colors
+    const colors = chart.customAttr.basicStyle.subColors ?? CHART_MIX_DEFAULT_BASIC_STYLE.subColors
     const { yAxisExt, extBubble } = chart
     if (extBubble?.length) {
       data?.forEach(d => {
@@ -525,6 +574,14 @@ export class ColumnLineMix extends G2PlotChartView<DualAxesOptions, DualAxes> {
           }
         }
       }
+      const size = Math.sqrt(o.legend.pageNavigator?.text?.style?.fontSize ?? 16)
+      o.legend.marker.style = style => {
+        const fill = style.fill ?? style.stroke
+        return {
+          r: size < 4 ? 4 : size,
+          fill
+        }
+      }
     }
     return o
   }
@@ -553,7 +610,6 @@ export class ColumnLineMix extends G2PlotChartView<DualAxesOptions, DualAxes> {
       this.configLegend,
       this.configXAxis,
       this.configYAxis,
-      this.configSlider,
       this.configAnalyse,
       this.configEmptyDataStrategy
     )(chart, options)
@@ -568,10 +624,6 @@ export class GroupColumnLineMix extends ColumnLineMix {
   axis: AxisType[] = [...this['axis'], 'xAxisExt']
   propertyInner = {
     ...CHART_MIX_EDITOR_PROPERTY_INNER,
-    'dual-basic-style-selector': [
-      ...CHART_MIX_EDITOR_PROPERTY_INNER['dual-basic-style-selector'],
-      'seriesColor'
-    ],
     'label-selector': ['vPosition', 'seriesLabelFormatter'],
     'tooltip-selector': [
       ...CHART_MIX_EDITOR_PROPERTY_INNER['tooltip-selector'],
@@ -580,10 +632,11 @@ export class GroupColumnLineMix extends ColumnLineMix {
   }
   axisConfig = {
     ...this['axisConfig'],
-    yAxis: {
-      name: `${t('chart.drag_block_value_axis_left')} / ${t('chart.column_quota')}`,
+    xAxisExt: {
+      name: `${t('chart.chart_group')} / ${t('chart.dimension')}`,
+      type: 'd',
       limit: 1,
-      type: 'q'
+      allowEmpty: true
     }
   }
 
@@ -683,10 +736,6 @@ export class StackColumnLineMix extends ColumnLineMix {
   axis: AxisType[] = [...this['axis'], 'extStack']
   propertyInner = {
     ...CHART_MIX_EDITOR_PROPERTY_INNER,
-    'dual-basic-style-selector': [
-      ...CHART_MIX_EDITOR_PROPERTY_INNER['dual-basic-style-selector'],
-      'seriesColor'
-    ],
     'label-selector': ['vPosition', 'seriesLabelFormatter'],
     'tooltip-selector': [
       ...CHART_MIX_EDITOR_PROPERTY_INNER['tooltip-selector'],
@@ -695,10 +744,11 @@ export class StackColumnLineMix extends ColumnLineMix {
   }
   axisConfig = {
     ...this['axisConfig'],
-    yAxis: {
-      name: `${t('chart.drag_block_value_axis_left')} / ${t('chart.column_quota')}`,
+    extStack: {
+      name: `${t('chart.stack_item')} / ${t('chart.dimension')}`,
+      type: 'd',
       limit: 1,
-      type: 'q'
+      allowEmpty: true
     }
   }
 
@@ -791,6 +841,123 @@ export class StackColumnLineMix extends ColumnLineMix {
   }
 
   constructor(name = 'chart-mix-stack') {
+    super(name)
+  }
+}
+
+export class DualLineMix extends ColumnLineMix {
+  axis: AxisType[] = [...this['axis'], 'xAxisExt']
+  propertyInner = {
+    ...CHART_MIX_EDITOR_PROPERTY_INNER,
+    'label-selector': ['seriesLabelFormatter'],
+    'tooltip-selector': [
+      ...CHART_MIX_EDITOR_PROPERTY_INNER['tooltip-selector'],
+      'seriesTooltipFormatter'
+    ]
+  }
+  axisConfig = {
+    ...this['axisConfig'],
+    xAxisExt: {
+      name: `${t('chart.drag_block_type_axis_left')} / ${t('chart.dimension')}`,
+      type: 'd',
+      limit: 1,
+      allowEmpty: true
+    }
+  }
+
+  protected getLeftType(): string {
+    return 'line'
+  }
+
+  protected configCustomColors(chart: Chart, options: DualAxesOptions): DualAxesOptions {
+    const tempOption = {
+      ...options
+    }
+    const basicStyle = parseJson(chart.customAttr).basicStyle as MixChartBasicStyle
+
+    const { seriesColor } = basicStyle
+    if (seriesColor?.length) {
+      const seriesMap = seriesColor.reduce((p, n) => {
+        p[n.id] = n
+        return p
+      }, {})
+      const { yAxis, xAxisExt } = chart
+      const { data } = options as unknown as Options
+      if (xAxisExt?.length) {
+        const seriesSet = new Set()
+        data[0]?.forEach(d => d.category !== null && seriesSet.add(d.category))
+        const tmp = [...seriesSet]
+        tmp.forEach((c, i) => {
+          const curAxisColor = seriesMap[c as string]
+          if (curAxisColor) {
+            if (i + 1 > basicStyle.colors.length) {
+              basicStyle.colors.push(curAxisColor.color)
+            } else {
+              basicStyle.colors[i] = curAxisColor.color
+            }
+          }
+        })
+      } else {
+        yAxis?.forEach((axis, index) => {
+          const curAxisColor = seriesMap[axis.id]
+          if (curAxisColor) {
+            if (index + 1 > basicStyle.colors.length) {
+              basicStyle.colors.push(curAxisColor.color)
+            } else {
+              basicStyle.colors[index] = curAxisColor.color
+            }
+          }
+        })
+      }
+    }
+    //左轴
+    const color = basicStyle.colors.map(ele => {
+      const tmp = hexColorToRGBA(ele, basicStyle.alpha)
+      if (basicStyle.gradient) {
+        return setGradientColor(tmp, true, 270)
+      } else {
+        return tmp
+      }
+    })
+    tempOption.geometryOptions[0].color = color
+
+    return tempOption
+  }
+
+  public setupSeriesColor(chart: ChartObj, data?: any[]): ChartBasicStyle['seriesColor'] {
+    const result: ChartBasicStyle['seriesColor'] = []
+    const seriesSet = new Set<string>()
+    const colors = chart.customAttr.basicStyle.colors
+    const { yAxis, xAxisExt } = chart
+    if (xAxisExt?.length) {
+      data?.forEach(d => {
+        if (d.value === null || d.category === null || seriesSet.has(d.category)) {
+          return
+        }
+        seriesSet.add(d.category)
+        result.push({
+          id: d.category,
+          name: d.category,
+          color: colors[(seriesSet.size - 1) % colors.length]
+        })
+      })
+    } else {
+      yAxis?.forEach(axis => {
+        if (seriesSet.has(axis.id)) {
+          return
+        }
+        seriesSet.add(axis.id)
+        result.push({
+          id: axis.id,
+          name: axis.chartShowName ?? axis.name,
+          color: colors[(seriesSet.size - 1) % colors.length]
+        })
+      })
+    }
+    return result
+  }
+
+  constructor(name = 'chart-mix-dual-line') {
     super(name)
   }
 }

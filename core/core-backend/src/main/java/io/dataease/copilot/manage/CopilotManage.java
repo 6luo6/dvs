@@ -450,7 +450,8 @@ public class CopilotManage {
     public String transSql(String type, String copilotSQL, Provider provider, ReceiveDTO receiveDTO) {
         if (type.equals("oracle") || type.equals("sqlServer")) {
             try {
-                if (copilotSQL.trim().endsWith(";")) {
+                copilotSQL = copilotSQL.trim();
+                if (copilotSQL.endsWith(";")) {
                     copilotSQL = copilotSQL.substring(0, copilotSQL.length() - 1);
                 }
                 DatasourceSchemaDTO datasourceSchemaDTO = new DatasourceSchemaDTO();

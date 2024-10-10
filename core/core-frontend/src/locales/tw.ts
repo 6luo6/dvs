@@ -192,6 +192,8 @@ export default {
       component_setting: '組件設置',
       hint: '提示詞',
       input_limit_50: '不超過50個字符',
+      input_limit_max: '不超過{0}個字符',
+      input_limit_min: '不少于{0}個字符',
       option: '選項',
       form_setting: '表單設置',
       confirm_delete: '確認刪除？(不會刪除已創建的數據庫表)',
@@ -264,7 +266,11 @@ export default {
       please_insert_end: '請輸入結束時間',
       save_form: '保存表單',
       default: '默認',
-      default_built_in: '內建數據庫'
+      default_built_in: '內建數據庫',
+      lt_check: '值需要小于{0}',
+      gt_check: '值需要大于{0}',
+      le_check: '值需要小于等于{0}',
+      ge_check: '值需要大于等于{0}'
     },
     database: {
       nvarchar: '字符串',
@@ -277,6 +283,8 @@ export default {
       commit_time: '提交時間',
       confirm_delete: '確認刪除?',
       add_data: '添加數據',
+      batch_upload: '批量上傳',
+      download: '下載',
       download_template: '下載模板',
       insert_data: '插入數據',
       update_data: '更新數據',
@@ -289,11 +297,15 @@ export default {
       data_not_found: ']的數據不存在'
     },
     task: {
+      finish_rate_hint: '填報完成率=已填報數據條數/下發填報條數*100%',
       distribute_frequency: '發送頻率',
       one_time: '僅下發一次',
       interval: '定期下發',
       distribute_setting: '下發設置',
       task_distribute_setting: '任務下發設置',
+      form_template_setting: '表單模板設置',
+      template_setting: '模板設置',
+      component: '組件標題',
       receive_object: '接收對象',
       receive_fit_column: '接收對象匹配字段',
       receiver: '接收人',
@@ -339,7 +351,7 @@ export default {
       assigned_task: '已下發任務',
       task_finish_in: '在任務下發',
       task_finish_in_suffix: '內完成填報',
-      open_sub_task: '查看子任務'
+      open_sub_task: '查看已下發任務'
     },
     on_the_left: '請在左側選擇表單',
     search_by_commit_name: '根據操作人名稱搜索'

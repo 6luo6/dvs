@@ -38,7 +38,10 @@ import { storeToRefs } from 'pinia'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import _ from 'lodash'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
-import { groupSizeStyleAdaptor } from '@/utils/style'
+import { groupSizeStyleAdaptor, groupStyleRevert } from '@/utils/style'
+import { isGroupCanvas, isTabCanvas } from '@/utils/canvasUtils'
+const parentNode = ref(null)
+const canvasId = ref('canvas-main')
 const snapshotStore = snapshotStoreWithOut()
 
 const dvMainStore = dvMainStoreWithOut()
@@ -100,13 +103,19 @@ const onPositionChange = key => {
       )
     }
   } else {
-    curComponent.value.style[key] = Math.round(
-      (positionMounted.value[key] * canvasStyleData.value.scale) / 100
-    )
+    curComponent.value.style[key] = (positionMounted.value[key] * canvasStyleData.value.scale) / 100
   }
 
-  if (curComponent.value.component === 'Group') {
-    //如果当前组件是Group分组 则要进行内部组件深度计算
+  //如果当前画布是Group内部画布 则对应组件定位在resize时要还原到groupStyle中
+  if (isGroupCanvas(canvasId.value) || isTabCanvas(canvasId.value)) {
+    groupStyleRevert(curComponent.value, {
+      width: parentNode.value.offsetWidth,
+      height: parentNode.value.offsetHeight
+    })
+  }
+
+  if (['Group', 'DeTabs'].includes(curComponent.value.component)) {
+    //如果当前组件是Group分组或者Tab 则要进行内部组件深度计算
     groupSizeStyleAdaptor(curComponent.value)
   }
 
@@ -117,9 +126,15 @@ const maintainRadioChange = () => {
   curComponent.value.aspectRatio = curComponent.value.style.width / curComponent.value.style.height
   snapshotStore.recordSnapshotCache()
 }
+const multiDimensionalChange = () => {
+  // do change
+  snapshotStore.recordSnapshotCache()
+}
 
 const positionInit = () => {
   if (curComponent.value) {
+    canvasId.value = curComponent.value.canvasId
+    parentNode.value = document.querySelector('#editor-' + canvasId.value)
     Object.keys(positionMounted.value).forEach(key => {
       positionMounted.value[key] = Math.round(
         (curComponent.value.style[key] * 100) / canvasStyleData.value.scale

@@ -11,6 +11,8 @@ import { ElMessage } from 'element-plus-secondary'
 import { useEmbedded } from '@/store/modules/embedded'
 import { useI18n } from '@/hooks/web/useI18n'
 import { XpackComponent } from '@/components/plugin'
+import { propTypes } from '@/utils/propTypes'
+import { setTitle } from '@/utils/utils'
 
 const dvMainStore = dvMainStoreWithOut()
 const { t } = useI18n()
@@ -32,7 +34,8 @@ const props = defineProps({
   isSelector: {
     type: Boolean,
     default: false
-  }
+  },
+  ticketArgs: propTypes.string.def(null)
 })
 
 const loadCanvasDataAsync = async (dvId, dvType) => {
@@ -56,6 +59,13 @@ const loadCanvasDataAsync = async (dvId, dvType) => {
       console.error(e)
     }
   }
+  let argsObject = null
+  try {
+    argsObject = JSON.parse(props.ticketArgs)
+  } catch (error) {
+    console.error(error)
+  }
+  const hasTicketArgs = argsObject && Object.keys(argsObject)
 
   // 添加外部参数
   let attachParam
@@ -65,12 +75,18 @@ const loadCanvasDataAsync = async (dvId, dvType) => {
 
   // 外部参数（iframe 或者 iframe嵌入）
   const attachParamsEncode = router.currentRoute.value.query.attachParams
-  if (attachParamsEncode) {
+  if (attachParamsEncode || hasTicketArgs) {
     try {
-      attachParam = JSON.parse(Base64.decode(decodeURIComponent(attachParamsEncode as string)))
+      if (!!attachParamsEncode) {
+        attachParam = JSON.parse(Base64.decode(decodeURIComponent(attachParamsEncode as string)))
+      }
+      if (hasTicketArgs) {
+        attachParam = Object.assign({}, attachParam, argsObject)
+      }
     } catch (e) {
       console.error(e)
       ElMessage.error(t('visualization.outer_param_decode_error'))
+      return
     }
   }
   initCanvasDataMobile(
@@ -101,7 +117,9 @@ const loadCanvasDataAsync = async (dvId, dvType) => {
       if (props.publicLinkStatus) {
         // 设置浏览器title为当前仪表板名称
         document.title = dvInfo.name
+        setTitle(dvInfo.name)
       }
+      initBrowserTimer()
     }
   )
 }
@@ -121,6 +139,16 @@ onMounted(async () => {
   dvMainStore.setEmbeddedCallBack(callBackFlag || 'no')
   dvMainStore.setPublicLinkStatus(props.publicLinkStatus)
 })
+
+const initBrowserTimer = () => {
+  if (state.canvasStylePreview.refreshBrowserEnable) {
+    const gap = state.canvasStylePreview.refreshBrowserUnit === 'minute' ? 60 : 1
+    const browserRefreshTime = state.canvasStylePreview.refreshBrowserTime * gap * 1000
+    setTimeout(() => {
+      window.location.reload()
+    }, browserRefreshTime)
+  }
+}
 
 defineExpose({
   loadCanvasDataAsync
@@ -147,7 +175,7 @@ defineExpose({
   />
 </template>
 
-<style lang="less">
+<style lang="less" scoped>
 .content {
   background-color: #ffffff;
   width: 100vw;

@@ -1,16 +1,18 @@
 <script lang="ts" setup>
+import icon_info_outlined from '@/assets/svg/icon_info_outlined.svg'
 import { computed, onMounted, PropType, reactive, ref, watch } from 'vue'
 import { useI18n } from '@/hooks/web/useI18n'
 import { COLOR_PANEL, DEFAULT_LABEL } from '@/views/chart/components/editor/util/chart'
 import { ElFormItem, ElIcon, ElInput, ElSpace } from 'element-plus-secondary'
 import { formatterType, unitType } from '../../../js/formatter'
-import { defaultsDeep, cloneDeep, intersection, union, defaultTo, map } from 'lodash-es'
+import { defaultsDeep, cloneDeep, intersection, union, defaultTo, map, isEmpty } from 'lodash-es'
 import { includesAny } from '../../util/StringUtils'
 import { fieldType } from '@/utils/attr'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { storeToRefs } from 'pinia'
 import Icon from '../../../../../../components/icon-custom/src/Icon.vue'
-import { useEmitt } from '@/hooks/web/useEmitt'
+import { iconFieldMap } from '@/components/icon-group/field-list'
+import { parseJson } from '../../../js/util'
 
 const { t } = useI18n()
 
@@ -43,12 +45,6 @@ const dvMainStore = dvMainStoreWithOut()
 const toolTip = computed(() => {
   return props.themes === 'dark' ? 'ndark' : 'dark'
 })
-const changeDataset = () => {
-  if (showProperty('showFields')) {
-    state.labelForm.showFields = []
-    emit('onLabelChange', { data: state.labelForm }, 'showFields')
-  }
-}
 const { batchOptStatus } = storeToRefs(dvMainStore)
 watch(
   [() => props.chart.customAttr.label, () => props.chart.customAttr.label.show],
@@ -227,12 +223,13 @@ const COMPUTED_DEFAULT_LABEL = computed(() => {
   return DEFAULT_LABEL
 })
 
-const state = reactive<{ labelForm: ChartLabelAttr | any }>({
+const state = reactive<{ labelForm: DeepPartial<ChartLabelAttr> }>({
   labelForm: {
     quotaLabelFormatter: DEFAULT_LABEL.quotaLabelFormatter,
     seriesLabelFormatter: [],
     labelFormatter: DEFAULT_LABEL.labelFormatter,
-    conversionTag: DEFAULT_LABEL.conversionTag
+    conversionTag: DEFAULT_LABEL.conversionTag,
+    totalFormatter: DEFAULT_LABEL.totalFormatter
   }
 })
 
@@ -246,6 +243,7 @@ const init = () => {
   if (chart.customAttr) {
     const customAttr = chart.customAttr
     if (customAttr.label) {
+      configCompat(customAttr.label)
       state.labelForm = defaultsDeep(customAttr.label, cloneDeep(COMPUTED_DEFAULT_LABEL.value))
       if (chartType.value === 'liquid' && state.labelForm.fontSize < fontSizeList.value[0].value) {
         state.labelForm.fontSize = fontSizeList.value[0].value
@@ -253,6 +251,13 @@ const init = () => {
       initSeriesLabel()
       formatterSelector.value?.blur()
     }
+    //初始化标签位置
+    initPosition()
+  }
+}
+const configCompat = (labelAttr: DeepPartial<ChartLabelAttr>) => {
+  if (labelAttr.showStackQuota === undefined) {
+    labelAttr.showStackQuota = labelAttr.show
   }
 }
 const checkLabelContent = contentProp => {
@@ -324,32 +329,78 @@ const showPositionV = computed(() => {
   }
   return false
 })
+function initBidirectionalBarPosition() {
+  if (chartType.value === 'bidirectional-bar') {
+    const layout = props.chart.customAttr.basicStyle.layout
+    const oldPosition = state?.labelForm?.position
+    if (state?.labelForm?.position === 'inner' || state?.labelForm?.position === 'outer') {
+      state.labelForm.position = 'middle'
+    }
+    if (layout === 'horizontal') {
+      if (state?.labelForm?.position === 'top') {
+        state.labelForm.position = 'right'
+      }
+      if (state?.labelForm?.position === 'bottom') {
+        state.labelForm.position = 'left'
+      }
+    }
+    if (layout === 'vertical') {
+      if (state?.labelForm?.position === 'left') {
+        state.labelForm.position = 'bottom'
+      }
+      if (state?.labelForm?.position === 'right') {
+        state.labelForm.position = 'top'
+      }
+    }
+    if (oldPosition !== state.labelForm.position) {
+      changeLabelAttr('position')
+    }
+  }
+}
+
+function initPosition() {
+  if (chartType.value === 'bidirectional-bar') {
+    initBidirectionalBarPosition()
+  } else {
+    const oldPosition = state?.labelForm?.position
+    if (showProperty('rPosition')) {
+      if (state?.labelForm?.position !== 'inner') {
+        state.labelForm.position = 'outer'
+      }
+    } else if (showProperty('hPosition')) {
+      if (state?.labelForm?.position === 'top') {
+        state.labelForm.position = 'right'
+      } else if (state?.labelForm?.position === 'bottom') {
+        state.labelForm.position = 'left'
+      } else if (state?.labelForm?.position === 'inner' || state?.labelForm?.position === 'outer') {
+        state.labelForm.position = 'middle'
+      }
+    } else if (showProperty('vPosition')) {
+      if (state?.labelForm?.position === 'left') {
+        state.labelForm.position = 'bottom'
+      } else if (state?.labelForm?.position === 'right') {
+        state.labelForm.position = 'top'
+      } else if (state?.labelForm?.position === 'inner' || state?.labelForm?.position === 'outer') {
+        state.labelForm.position = 'middle'
+      }
+    }
+    if (oldPosition !== state.labelForm.position) {
+      changeLabelAttr('position')
+    }
+  }
+}
+
 watch(
   () => props.chart.customAttr.basicStyle.layout,
   () => {
-    const layout = props.chart.customAttr.basicStyle.layout
-    if (chartType.value === 'bidirectional-bar') {
-      if (layout === 'horizontal') {
-        if (state?.labelForm?.position === 'top') {
-          state.labelForm.position = 'right'
-        }
-        if (state?.labelForm?.position === 'bottom') {
-          state.labelForm.position = 'left'
-        }
-      }
-      if (layout === 'vertical') {
-        if (state?.labelForm?.position === 'left') {
-          state.labelForm.position = 'bottom'
-        }
-        if (state?.labelForm?.position === 'right') {
-          state.labelForm.position = 'top'
-        }
-      }
-      changeLabelAttr('position')
-    }
+    initBidirectionalBarPosition()
   },
   { deep: true }
 )
+
+watch(chartType, (value, oldValue) => {
+  initPosition()
+})
 
 const allFields = computed(() => {
   return defaultTo(props.allFields, []).map(item => ({
@@ -363,16 +414,31 @@ const allFields = computed(() => {
 const defaultPlaceholder = computed(() => {
   if (state.labelForm.showFields && state.labelForm.showFields.length > 0) {
     return state.labelForm.showFields
-      .map(field => {
+      .filter(field => !isEmpty(field))
+      ?.map(field => {
         return '${' + field.split('@')[1] + '}'
       })
       .join(',')
   }
   return ''
 })
+watch(
+  () => allFields.value,
+  () => {
+    let result = []
+    state.labelForm.showFields?.forEach(field => {
+      if (allFields.value?.map(i => i.value).includes(field)) {
+        result.push(field)
+      }
+    })
+    state.labelForm.showFields = result
+    if (allFields.value.length > 0) {
+      changeLabelAttr('showFields')
+    }
+  }
+)
 onMounted(() => {
   init()
-  useEmitt({ name: 'dataset-change', callback: changeDataset })
 })
 const isGroupBar = computed(() => {
   return props.chart.type === 'bar-group'
@@ -392,6 +458,36 @@ const conversionPrecision = [
     label-position="top"
   >
     <el-row v-show="showEmpty" style="margin-bottom: 12px"> 无其他可设置的属性</el-row>
+    <div>
+      <el-form-item
+        v-if="showProperty('showStackQuota')"
+        class="form-item"
+        :class="'form-item-' + themes"
+        style="display: inline-block; margin-right: 8px"
+      >
+        <el-checkbox
+          size="small"
+          :effect="themes"
+          v-model="state.labelForm.showStackQuota"
+          @change="changeLabelAttr('showStackQuota')"
+          :label="t('chart.quota')"
+        />
+      </el-form-item>
+      <el-form-item
+        v-if="showProperty('showTotal')"
+        class="form-item"
+        :class="'form-item-' + themes"
+        style="display: inline-block"
+      >
+        <el-checkbox
+          size="small"
+          :effect="themes"
+          v-model="state.labelForm.showTotal"
+          @change="changeLabelAttr('showTotal')"
+          :label="t('chart.total_show')"
+        />
+      </el-form-item>
+    </div>
     <div v-if="!isGroupBar">
       <el-space>
         <el-form-item
@@ -467,7 +563,7 @@ const conversionPrecision = [
                 <div>可以${fieldName}的形式读取字段值（不支持换行）</div>
               </template>
               <el-icon class="hint-icon" :class="{ 'hint-icon--dark': themes === 'dark' }">
-                <Icon name="icon_info_outlined" />
+                <Icon name="icon_info_outlined"><icon_info_outlined class="svg-icon" /></Icon>
               </el-icon>
             </el-tooltip>
           </span>
@@ -539,7 +635,7 @@ const conversionPrecision = [
           </template>
           <span style="vertical-align: middle">
             <el-icon style="cursor: pointer">
-              <Icon name="icon_info_outlined" />
+              <Icon name="icon_info_outlined"><icon_info_outlined class="svg-icon" /></Icon>
             </el-icon>
           </span>
         </el-tooltip>
@@ -653,6 +749,140 @@ const conversionPrecision = [
           :label="t('chart.value_formatter_thousand_separator')"
         />
       </el-form-item>
+    </template>
+    <template v-if="false && showProperty('totalFormatter')">
+      <el-divider class="m-divider" :class="{ 'divider-dark': themes === 'dark' }" />
+      <div v-show="state.labelForm.showTotal">
+        <el-space>
+          <el-form-item
+            class="form-item"
+            :class="'form-item-' + themes"
+            v-if="showProperty('totalColor')"
+            :label="t('chart.text')"
+          >
+            <el-color-picker
+              :effect="themes"
+              v-model="state.labelForm.totalColor"
+              class="color-picker-style"
+              :predefine="COLOR_PANEL"
+              @change="changeLabelAttr('totalColor')"
+              is-custom
+            />
+          </el-form-item>
+          <el-form-item
+            class="form-item"
+            :class="'form-item-' + themes"
+            v-if="showProperty('totalFontSize')"
+          >
+            <template #label>&nbsp;</template>
+            <el-tooltip content="字号" :effect="toolTip" placement="top">
+              <el-select
+                size="small"
+                style="width: 108px"
+                :effect="themes"
+                v-model.number="state.labelForm.totalFontSize"
+                :placeholder="t('chart.text_fontsize')"
+                @change="changeLabelAttr('totalFontSize')"
+              >
+                <el-option
+                  v-for="option in fontSizeList"
+                  :key="option.value"
+                  :label="option.name"
+                  :value="option.value"
+                />
+              </el-select>
+            </el-tooltip>
+          </el-form-item>
+        </el-space>
+        <el-form-item
+          :label="$t('chart.value_formatter_type')"
+          class="form-item"
+          :class="'form-item-' + themes"
+        >
+          <el-select
+            size="small"
+            :effect="themes"
+            v-model="state.labelForm.totalFormatter.type"
+            @change="changeLabelAttr('totalFormatter.type')"
+          >
+            <el-option
+              v-for="type in formatterType"
+              :key="type.value"
+              :label="$t('chart.' + type.name)"
+              :value="type.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item
+          v-if="state.labelForm.totalFormatter && state.labelForm.totalFormatter.type !== 'auto'"
+          :label="$t('chart.value_formatter_decimal_count')"
+          class="form-item"
+          :class="'form-item-' + themes"
+        >
+          <el-input-number
+            controls-position="right"
+            :effect="themes"
+            v-model="state.labelForm.totalFormatter.decimalCount"
+            :precision="0"
+            :min="0"
+            :max="10"
+            @change="changeLabelAttr('totalFormatter.decimalCount')"
+          />
+        </el-form-item>
+
+        <el-row
+          :gutter="8"
+          v-if="state.labelForm.totalFormatter && state.labelForm.totalFormatter.type !== 'percent'"
+        >
+          <el-col :span="12">
+            <el-form-item
+              :label="$t('chart.value_formatter_unit')"
+              class="form-item"
+              :class="'form-item-' + themes"
+            >
+              <el-select
+                size="small"
+                :effect="themes"
+                v-model="state.labelForm.totalFormatter.unit"
+                :placeholder="$t('chart.pls_select_field')"
+                @change="changeLabelAttr('totalFormatter.unit')"
+              >
+                <el-option
+                  v-for="item in unitType"
+                  :key="item.value"
+                  :label="$t('chart.' + item.name)"
+                  :value="item.value"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item
+              :label="$t('chart.value_formatter_suffix')"
+              class="form-item"
+              :class="'form-item-' + themes"
+            >
+              <el-input
+                :effect="themes"
+                v-model="state.labelForm.totalFormatter.suffix"
+                clearable
+                :placeholder="$t('commons.input_content')"
+                @change="changeLabelAttr('totalFormatter.suffix')"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item class="form-item" :class="'form-item-' + themes">
+          <el-checkbox
+            size="small"
+            :effect="themes"
+            v-model="state.labelForm.totalFormatter.thousandSeparator"
+            @change="changeLabelAttr('totalFormatter.thousandSeparator')"
+            :label="t('chart.value_formatter_thousand_separator')"
+          />
+        </el-form-item>
+      </div>
     </template>
 
     <el-form-item
@@ -855,19 +1085,25 @@ const conversionPrecision = [
         >
           <template #prefix>
             <el-icon v-if="curSeriesFormatter[computedIdKey]" style="font-size: 14px">
-              <Icon
-                :className="`field-icon-${fieldType[curSeriesFormatter.deType]}`"
-                :name="`field_${fieldType[curSeriesFormatter.deType]}`"
-              />
+              <Icon :className="`field-icon-${fieldType[curSeriesFormatter.deType]}`"
+                ><component
+                  :class="`field-icon-${fieldType[curSeriesFormatter.deType]}`"
+                  class="svg-icon"
+                  :is="iconFieldMap[fieldType[curSeriesFormatter.deType]]"
+                ></component
+              ></Icon>
             </el-icon>
           </template>
           <template v-for="item in state.labelForm.seriesLabelFormatter" :key="item[computedIdKey]">
             <el-option class="series-select-option" :value="item" :label="item.optionLabel">
               <el-icon style="margin-right: 8px">
-                <Icon
-                  :className="`field-icon-${fieldType[item.deType]}`"
-                  :name="`field_${fieldType[item.deType]}`"
-                />
+                <Icon :className="`field-icon-${fieldType[item.deType]}`"
+                  ><component
+                    :class="`field-icon-${fieldType[item.deType]}`"
+                    class="svg-icon"
+                    :is="iconFieldMap[fieldType[item.deType]]"
+                  ></component
+                ></Icon>
               </el-icon>
               {{ item.optionShowName }}
             </el-option>
@@ -1120,7 +1356,7 @@ const conversionPrecision = [
               </template>
               <span style="vertical-align: middle">
                 <el-icon style="cursor: pointer">
-                  <Icon name="icon_info_outlined" />
+                  <Icon name="icon_info_outlined"><icon_info_outlined class="svg-icon" /></Icon>
                 </el-icon>
               </span>
             </el-tooltip>

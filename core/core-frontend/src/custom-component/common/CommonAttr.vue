@@ -14,6 +14,9 @@ import CommonLinkJumpSet from '@/components/visualization/CommonLinkJumpSet.vue'
 import { ElIcon, ElMessage } from 'element-plus-secondary'
 import { canvasSave } from '@/utils/canvasUtils'
 import TabCarouselSetting from '@/custom-component/common/TabCarouselSetting.vue'
+import CarouselSetting from '@/custom-component/common/CarouselSetting.vue'
+import CommonBorderSetting from '@/custom-component/common/CommonBorderSetting.vue'
+import CollapseSwitchItem from '../../components/collapse-switch-item/src/CollapseSwitchItem.vue'
 const snapshotStore = snapshotStoreWithOut()
 
 const { t } = useI18n()
@@ -102,6 +105,10 @@ const colorPickerWidth = computed(() => {
   }
 })
 
+const borderSettingShow = computed(() => {
+  return !!element.value.style['borderStyle']
+})
+
 // 暂时关闭
 const eventsShow = computed(() => {
   return (
@@ -119,9 +126,7 @@ const backgroundCustomShow = computed(() => {
   return (
     dashboardActive.value ||
     (!dashboardActive.value &&
-      !['CanvasBoard', 'CanvasIcon', 'Picture', 'CircleShape', 'RectShape'].includes(
-        element.value.component
-      ))
+      !['CanvasBoard', 'CanvasIcon', 'CircleShape', 'RectShape'].includes(element.value.component))
   )
 })
 onMounted(() => {
@@ -170,7 +175,9 @@ const isDisabled = id => {
       <el-collapse-item :effect="themes" title="位置" name="position" v-if="positionComponentShow">
         <component-position :themes="themes" />
       </el-collapse-item>
-
+      <slot name="dataset" />
+      <slot name="carousel" />
+      <slot name="threshold" />
       <el-collapse-item
         :effect="themes"
         title="背景"
@@ -209,7 +216,22 @@ const isDisabled = id => {
       >
         <common-event :themes="themes" :events-info="element.events"></common-event>
       </el-collapse-item>
-<el-collapse-item
+      <collapse-switch-item
+        v-if="element && borderSettingShow"
+        v-model="element.style.borderActive"
+        @modelChange="val => onStyleAttrChange({ key: 'borderActive', value: val })"
+        :themes="themes"
+        title="边框"
+        name="borderSetting"
+        class="common-style-area"
+      >
+        <common-border-setting
+          :style-info="element.style"
+          :themes="themes"
+          @onStyleAttrChange="onStyleAttrChange"
+        ></common-border-setting>
+      </collapse-switch-item>
+      <el-collapse-item
         :effect="themes"
         title="选中切换"
         name="activeChange"
@@ -291,11 +313,8 @@ const isDisabled = id => {
           </span>
         </div>
       </collapse-switch-item>
-      <TabCarouselSetting
-        v-if="carouselShow"
-        :element="element"
-        :themes="themes"
-      ></TabCarouselSetting>
+   
+      <CarouselSetting v-if="carouselShow" :element="element" :themes="themes"></CarouselSetting>
     </el-collapse>
 <!--跳转设置-->
     <CommonLinkJumpSet ref="linkJumpRef" />

@@ -1,4 +1,8 @@
 <script lang="ts" setup>
+import dvPreviewDownload from '@/assets/svg/dv-preview-download.svg'
+import deDelete from '@/assets/svg/de-delete.svg'
+import icon_fileExcel_colorful from '@/assets/svg/icon_file-excel_colorful.svg'
+import icon_refresh_outlined from '@/assets/svg/icon_refresh_outlined.svg'
 import { ref, h, onUnmounted, computed } from 'vue'
 import { EmptyBackground } from '@/components/empty-background'
 import { ElButton, ElMessage, ElMessageBox, ElTabPane, ElTabs } from 'element-plus-secondary'
@@ -248,6 +252,7 @@ const downLoadAll = () => {
           document.body.appendChild(link)
           link.click()
           document.body.removeChild(link)
+          URL.revokeObjectURL(link.href)
         })
         .finally(() => {
           exportDatasetLoading.value = false
@@ -294,6 +299,7 @@ const downloadClick = item => {
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+      URL.revokeObjectURL(link.href)
     })
     .finally(() => {
       exportDatasetLoading.value = false
@@ -395,7 +401,7 @@ defineExpose({
       @click="downLoadAll"
     >
       <template #icon>
-        <Icon name="dv-preview-download"></Icon>
+        <Icon name="dv-preview-download"><dvPreviewDownload class="svg-icon" /></Icon>
       </template>
       {{ $t('data_export.download_all') }}
     </el-button>
@@ -403,13 +409,21 @@ defineExpose({
       v-if="activeName === 'SUCCESS' && multipleSelection.length !== 0"
       secondary
       @click="downLoadAll"
-      ><template #icon> <Icon name="de-delete"></Icon> </template>{{ $t('data_export.download') }}
+    >
+      <template #icon>
+        <Icon name="dv-preview-download"><dvPreviewDownload class="svg-icon" /></Icon>
+      </template>
+      {{ $t('data_export.download') }}
     </el-button>
     <el-button v-if="multipleSelection.length === 0" secondary @click="delAll"
-      ><template #icon> <Icon name="de-delete"></Icon> </template>{{ $t('data_export.del_all') }}
+      ><template #icon>
+        <Icon name="de-delete"><deDelete class="svg-icon" /></Icon> </template
+      >{{ $t('data_export.del_all') }}
     </el-button>
     <el-button v-if="multipleSelection.length !== 0" secondary @click="delAll"
-      ><template #icon> <Icon name="de-delete"></Icon> </template>{{ $t('commons.delete') }}
+      ><template #icon>
+        <Icon name="de-delete"><deDelete class="svg-icon" /></Icon> </template
+      >{{ $t('commons.delete') }}
     </el-button>
     <div class="table-container" :class="!tableData.length && 'hidden-bottom'">
       <el-table
@@ -424,7 +438,9 @@ defineExpose({
           <template #default="scope">
             <div class="name-excel">
               <el-icon style="font-size: 24px">
-                <Icon name="icon_file-excel_colorful"></Icon>
+                <Icon name="icon_file-excel_colorful"
+                  ><icon_fileExcel_colorful class="svg-icon"
+                /></Icon>
               </el-icon>
               <div class="name-content">
                 <div class="fileName">{{ scope.row.fileName }}</div>
@@ -448,10 +464,18 @@ defineExpose({
           </template>
         </el-table-column>
         <el-table-column prop="exportFromName" :label="$t('data_export.export_obj')" width="200" />
+        <el-table-column prop="exportTime" width="180" :label="$t('data_export.export_time')">
+          <template #default="scope">
+            <span>{{ timestampFormatDate(scope.row.exportTime) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="exportFromType" width="120" :label="$t('data_export.export_from')">
           <template #default="scope">
             <span v-if="scope.row.exportFromType === 'dataset'">{{ t('data_set.data_set') }}</span>
             <span v-if="scope.row.exportFromType === 'chart'">{{ t('data_set.view') }}</span>
+            <span v-if="scope.row.exportFromType === 'data_filling'">{{
+              t('data_fill.data_fill')
+            }}</span>
           </template>
         </el-table-column>
         <el-table-column
@@ -460,11 +484,6 @@ defineExpose({
           :label="t('data_set.organization')"
           width="200"
         />
-        <el-table-column prop="exportTime" width="180" :label="$t('data_export.export_time')">
-          <template #default="scope">
-            <span>{{ timestampFormatDate(scope.row.exportTime) }}</span>
-          </template>
-        </el-table-column>
         <el-table-column fixed="right" prop="operate" width="90" :label="$t('commons.operating')">
           <template #default="scope">
             <el-tooltip effect="dark" :content="t('data_set.download')" placement="top">
@@ -475,7 +494,7 @@ defineExpose({
               >
                 <template #icon>
                   <el-icon>
-                    <Icon name="dv-preview-download"></Icon>
+                    <Icon name="dv-preview-download"><dvPreviewDownload class="svg-icon" /></Icon>
                   </el-icon>
                 </template>
               </el-button>
@@ -484,7 +503,9 @@ defineExpose({
             <el-tooltip effect="dark" :content="t('data_set.re_export')" placement="top">
               <el-button v-if="scope.row.exportStatus === 'FAILED'" text @click="retry(scope.row)">
                 <template #icon>
-                  <Icon name="icon_refresh_outlined"></Icon>
+                  <Icon name="icon_refresh_outlined"
+                    ><icon_refresh_outlined class="svg-icon"
+                  /></Icon>
                 </template>
               </el-button>
             </el-tooltip>
@@ -492,7 +513,7 @@ defineExpose({
             <el-tooltip effect="dark" :content="t('data_set.delete')" placement="top">
               <el-button text @click="deleteField(scope.row)">
                 <template #icon>
-                  <Icon name="de-delete"></Icon>
+                  <Icon name="de-delete"><deDelete class="svg-icon" /></Icon>
                 </template>
               </el-button>
             </el-tooltip>

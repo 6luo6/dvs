@@ -3,7 +3,7 @@ import {
   AntVDrawOptions,
   ChartLibraryType
 } from '@/views/chart/components/js/panel/types'
-import type {
+import {
   S2Theme,
   SpreadSheet,
   Style,
@@ -85,10 +85,6 @@ export abstract class S2ChartView<P extends SpreadSheet> extends AntVAbstractCha
         break
       case 'rowCell':
       case 'colCell':
-        if (meta.field === SERIES_NUMBER_FIELD) {
-          content = cell.getTextShape()['attrs'].text
-          break
-        }
         content = meta.label
         field = find(metaConfig, item => item.field === content)
         if (field) {

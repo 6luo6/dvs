@@ -29,7 +29,7 @@ import {
   findDragComponent,
   findNewComponent,
   isDashboard,
-  isGroupCanvas,
+  isGroupOrTabCanvas,
   isMainCanvas,
   isSameCanvas,
   useModal
@@ -207,8 +207,30 @@ const start = ref({
 const width = ref(0)
 const height = ref(0)
 const isShowArea = ref(false)
-const svgFilterAttrs = ['width', 'height', 'top', 'left', 'rotate', 'backgroundColor']
+const svgFilterAttrs = [
+  'width',
+  'height',
+  'top',
+  'left',
+  'rotate',
+  'backgroundColor',
+  'borderWidth',
+  'borderStyle',
+  'borderColor'
+]
 const commonFilterAttrs = ['width', 'height', 'top', 'left', 'rotate']
+const commonFilterAttrsFilterBorder = [
+  'width',
+  'height',
+  'top',
+  'left',
+  'rotate',
+  'borderActive',
+  'borderWidth',
+  'borderRadius',
+  'borderStyle',
+  'borderColor'
+]
 const userViewEnlargeRef = ref(null)
 const customDatasetParamsRef = ref(null)
 const linkJumpRef = ref(null)
@@ -239,6 +261,12 @@ watch(
     groupAreaClickChange()
   }
 )
+
+const watermarkUpdate = () => {
+  setTimeout(() => {
+    initWatermark()
+  })
+}
 
 const initWatermark = (waterDomId = 'editor-canvas-main') => {
   try {
@@ -294,8 +322,8 @@ const pointShadowShow = computed(() => {
 })
 
 const curGap = computed(() => {
-  return dashboardActive.value && canvasStyleData.value.dashboard.gap === 'yes'
-    ? canvasStyleData.value.dashboard.gapSize
+  return dashboardActive.value && canvasStyleData.value?.dashboard?.gap === 'yes'
+    ? canvasStyleData.value?.dashboard?.gapSize
     : 0
 })
 
@@ -311,8 +339,8 @@ const dashboardActive = computed(() => {
   return dvInfo.value.type === 'dashboard'
 })
 
-const dataVActive = computed(() => {
-  return dvInfo.value.type === 'dataV'
+const groupCanvasActive = computed(() => {
+  return isGroupOrTabCanvas(canvasId.value)
 })
 
 // 融合矩阵设计
@@ -330,7 +358,7 @@ let lastTask = undefined
 let isOverlay = false //是否正在交换位置
 let moveTime = 200 //移动动画时间
 
-let itemMaxY = 0
+const itemMaxY = ref(0)
 let itemMaxX = 0
 let snapshotTimer = ref(null)
 
@@ -421,7 +449,7 @@ const createGroup = () => {
     let style = { left: 0, top: 0, right: 0, bottom: 0 }
     if (component.component == 'Group') {
       component.propValue.forEach(item => {
-        const rectInfo = _$(`#component${item.id}`).getBoundingClientRect()
+        const rectInfo = _$(`#shape-id-${item.id}`).getBoundingClientRect()
         style.left = rectInfo.left - editorX.value
         style.top = rectInfo.top - editorY.value
         style.right = rectInfo.right - editorX.value
@@ -513,7 +541,7 @@ const handleContextMenu = e => {
 
   // 组件处于编辑状态的时候 如富文本 不弹出右键菜单
   if (!curComponent.value || (curComponent.value && !curComponent.value.editing)) {
-    if (['VQuery'].includes(curComponent.value.component)) {
+    if (curComponent.value && ['VQuery'].includes(curComponent.value.component)) {
       left = left * curBaseScale.value + 150
       top = top * curBaseScale.value + curComponent.value.style.top * (1 - curBaseScale.value)
     }
@@ -530,7 +558,7 @@ const getComponentStyle = item => {
     return getStyle(item.activeChange.style, commonFilterAttrs)
   }
   else{
-    return getStyle(item.style, commonFilterAttrs)
+    return getStyle(item.style, item.style.borderActive ? commonFilterAttrs : commonFilterAttrsFilterBorder)
   }
 }
 
@@ -543,7 +571,8 @@ const getShapeItemShowStyle = item => {
     dvModel: dvInfo.value.type,
     cellWidth: cellWidth.value,
     cellHeight: cellHeight.value,
-    curGap: curGap.value
+    curGap: curGap.value,
+    showPosition: 'edit'
   })
 }
 
@@ -573,14 +602,19 @@ const getTextareaHeight = (element, text) => {
 }
 
 const editStyle = computed(() => {
-  if (dashboardActive.value || isGroupCanvas(canvasId.value)) {
+  if (isGroupOrTabCanvas(canvasId.value)) {
     return {
       width: '100%',
       height: '100%'
     }
+  } else if (dashboardActive.value) {
+    return {
+      width: '100%',
+      height: itemMaxY.value * cellHeight.value + 'px'
+    }
   } else {
     const result = {
-      ...getCanvasStyle(canvasStyleData.value),
+      ...getCanvasStyle(canvasStyleData.value, canvasId.value),
       width: changeStyleWithScale(canvasStyleData.value.width) + 'px',
       height: changeStyleWithScale(canvasStyleData.value.height) + 'px'
     }
@@ -717,9 +751,9 @@ function fillPositionBox(maxY) {
     }
   }
 
-  itemMaxY = maxY
+  itemMaxY.value = maxY
   //problem
-  $(container.value).css('height', (itemMaxY + 2) * cellHeight.value + 'px')
+  $(container.value).css('height', (itemMaxY.value + 2) * cellHeight.value + 'px')
 }
 
 function removeItemFromPositionBox(item) {
@@ -767,7 +801,7 @@ function resizePlayer(item, newSize) {
     item.sizeX = itemMaxX - item.x + 1
   }
 
-  if (item.sizeY + item.y > itemMaxY) {
+  if (item.sizeY + item.y > itemMaxY.value) {
     fillPositionBox(item.y + item.sizeY)
   }
   emptyTargetCell(item)
@@ -816,7 +850,7 @@ function checkItemPosition(item, position) {
     item.sizeY = 1
   }
 
-  if (item.y + item.sizeY > itemMaxY - 1) {
+  if (item.y + item.sizeY > itemMaxY.value - 1) {
     fillPositionBox(item.y + item.sizeY - 1)
   }
 }
@@ -858,14 +892,16 @@ function removeItemById(componentId) {
 function removeItem(index) {
   let item = componentData.value[index]
   if (item && isSameCanvas(item, canvasId.value)) {
-    removeItemFromPositionBox(item)
-    let belowItems = findBelowItems(item)
-    _.forEach(belowItems, function (upItem) {
-      let canGoUpRows = canItemGoUp(upItem)
-      if (canGoUpRows > 0) {
-        moveItemUp(upItem, canGoUpRows)
-      }
-    })
+    if (isDashboard()) {
+      removeItemFromPositionBox(item)
+      let belowItems = findBelowItems(item)
+      _.forEach(belowItems, function (upItem) {
+        let canGoUpRows = canItemGoUp(upItem)
+        if (canGoUpRows > 0) {
+          moveItemUp(upItem, canGoUpRows)
+        }
+      })
+    }
     let checkedFields = []
     if (item.innerType === 'VQuery') {
       ;(item.propValue || []).forEach(ele => {
@@ -982,8 +1018,8 @@ function setPlayerPosition(item, position) {
   let targetY = position.y || item.y
   item.x = targetX
   item.y = targetY
-  if (item.y + item.sizeY > itemMaxY) {
-    itemMaxY = item.y + item.sizeY
+  if (item.y + item.sizeY > itemMaxY.value) {
+    itemMaxY.value = item.y + item.sizeY
   }
 }
 
@@ -1087,7 +1123,7 @@ const canvasInit = () => {
   lastTask = undefined
   isOverlay = false //是否正在交换位置
   moveTime = 200 //移动动画时间
-  itemMaxY = 0
+  itemMaxY.value = 0
   itemMaxX = 0
 
   reCalcCellWidth()
@@ -1129,11 +1165,20 @@ const forceComputed = () => {
     cellHeight.value = cellHeight.value - 0.001
   })
 }
-const addItemBox = item => {
-  //仪表盘才重新计算shape
-  if (dashboardActive.value) {
-    syncShapeItemStyle(item, baseWidth.value, baseHeight.value)
+
+const maxYCount = () => {
+  if (componentData.value.length === 0) {
+    return 1
+  } else {
+    return componentData.value
+      .filter(item => item.y)
+      .map(item => item.y + item.sizeY) // 计算每个元素的 y + sizeY
+      .reduce((max, current) => Math.max(max, current), 0)
   }
+}
+const addItemBox = item => {
+  item.y = item.y === undefined ? maxYCount() : item.y
+  syncShapeItemStyle(item, baseWidth.value, baseHeight.value)
   forceComputed()
   nextTick(() => {
     addItem(item, componentData.value.length - 1)
@@ -1366,11 +1411,7 @@ const linkageSetOpen = item => {
 }
 
 const contextMenuShow = computed(() => {
-  if (curComponent.value) {
-    return curComponent.value.canvasId === canvasId.value
-  } else {
-    return isMainCanvas(canvasId.value)
-  }
+  return isMainCanvas(canvasId.value)
 })
 
 const markLineShow = computed(() => isMainCanvas(canvasId.value))
@@ -1493,7 +1534,8 @@ defineExpose({
   getMoveItem,
   handleMouseUp,
   handleMouseDown,
-  findPositionX
+  findPositionX,
+  watermarkUpdate
 })
 </script>
 
@@ -1502,7 +1544,11 @@ defineExpose({
     :id="mainDomId"
     ref="container"
     class="editor"
-    :class="{ edit: isEdit, 'dashboard-editor': dashboardActive }"
+    :class="{
+      edit: isEdit,
+      'dashboard-editor': dashboardActive,
+      'group-canvas': groupCanvasActive
+    }"
     :style="editStyle"
     @contextmenu="handleContextMenu"
   >
@@ -1709,5 +1755,10 @@ defineExpose({
     width: 100%;
     height: 100%;
   }
+}
+
+.group-canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 </style>

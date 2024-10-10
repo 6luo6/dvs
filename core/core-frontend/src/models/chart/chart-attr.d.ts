@@ -285,6 +285,14 @@ declare interface ChartBasicStyle {
    * 地图颜色字段
    */
   mapColorField: string
+  /** 
+   * 符号地图符号大小最小值
+   */
+  mapSymbolSizeMin: number
+  /**
+   * 符号地图符号大小最大值
+   */
+  mapSymbolSizeMax: number
 }
 /**
  * 表头属性
@@ -482,9 +490,13 @@ declare interface CalcTotals {
 /**
  * 汇总聚合配置
  */
-declare interface CalcTotalCfg {
+declare interface CalcTotalCfg extends Axis {
   dataeaseName: string
-  aggregation: 'MIN' | 'MAX' | 'AVG' | 'SUM' | ''
+  aggregation: 'MIN' | 'MAX' | 'AVG' | 'SUM' | 'CUSTOM' | ''
+  /**
+   * 自定义汇总表达式
+   */
+  originName: string
 }
 
 /**
@@ -709,6 +721,28 @@ declare interface ChartMiscAttr {
       }
     }
   }
+
+  /**
+   * 词云图轴值配置
+   */
+  wordCloudAxisValueRange: {
+    /**
+     * 自动轴值
+     */
+    auto: boolean
+    /**
+     * 最小值
+     */
+    min: number
+    /**
+     * 最大值
+     */
+    max: number
+    /**
+     * 轴值字段
+     */
+    fieldId: string
+  }
 }
 /**
  * 动态极值配置
@@ -822,6 +856,26 @@ declare interface ChartLabelAttr {
    * 转化率标签
    */
   conversionTag: ConversionTagAtt
+  /**
+   * 堆叠柱状图显示总计
+   */
+  showTotal: boolean
+  /**
+   * 总计标签字体大小
+   */
+  totalFontSize: number
+  /**
+   * 总计标签字体颜色
+   */
+  totalColor: string
+  /**
+   * 总计标签格式化设置
+   */
+  totalFormatter: BaseFormatter
+  /**
+   * 柱状图堆叠指标
+   */
+  showStackQuota: boolean
 }
 /**
  * 提示设置

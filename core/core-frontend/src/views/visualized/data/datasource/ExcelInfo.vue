@@ -1,10 +1,18 @@
 <script lang="ts" setup>
-import { propTypes } from '@/utils/propTypes'
-defineProps({
-  name: propTypes.string.def(''),
-  size: propTypes.number.def(0),
-  showDel: propTypes.bool.def(false)
-})
+import icon_excel from '@/assets/svg/icon_excel.svg'
+import icon_deleteTrash_outlined from '@/assets/svg/icon_delete-trash_outlined.svg'
+const props = withDefaults(
+  defineProps<{
+    name?: string
+    size?: number
+    showDel?: boolean
+  }>(),
+  {
+    name: '',
+    size: 0,
+    showDel: false
+  }
+)
 
 const emits = defineEmits(['del'])
 const del = () => {
@@ -15,14 +23,14 @@ const del = () => {
 <template>
   <div class="excel-info">
     <el-icon class="excel">
-      <Icon name="icon_excel"></Icon>
+      <Icon name="icon_excel"><icon_excel class="svg-icon" /></Icon>
     </el-icon>
     <div class="info">
       <p class="name ellipsis">{{ name || '-' }}</p>
       <p class="size ellipsis">{{ size || '-' }}</p>
     </div>
     <el-icon v-if="showDel" @click="del" class="delete">
-      <Icon name="icon_delete-trash_outlined"></Icon>
+      <Icon name="icon_delete-trash_outlined"><icon_deleteTrash_outlined class="svg-icon" /></Icon>
     </el-icon>
   </div>
 </template>
@@ -42,7 +50,7 @@ const del = () => {
   }
 
   .info {
-    font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+    font-family: var(--de-custom_font, 'PingFang');
     font-style: normal;
     font-weight: 400;
     width: 80%;

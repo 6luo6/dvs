@@ -113,7 +113,7 @@ export default {
     successful_go_to: '导出成功，前往',
     failed_go_to: '导出失败，前往',
     data_set: '数据集',
-    view: '视图',
+    view: '图表',
     organization: '所属组织',
     download: '下载',
     re_export: '重新导出',
@@ -252,8 +252,8 @@ export default {
     file_name: '文件名',
     version: '版本',
     please_set_driverClass: '请指定驱动类',
-    please_set_surpportVersions: '请输入支持的数据库大版本',
-    surpportVersions: '支持版本'
+    please_set_supportVersions: '请输入支持的数据库大版本',
+    supportVersions: '支持版本'
   },
   login: {
     welcome: '欢迎使用',
@@ -466,6 +466,7 @@ export default {
     input_limit_2_25: '{0}-{1}字符',
     input_limit_2_50: '2-50字符',
     input_limit_2_64: '2-64字符',
+    input_limit_1_64: '1-64字符',
     data_source_configuration: '数据源配置',
     data_source_table: '数据源表',
     auth_method: '认证方式',
@@ -753,7 +754,7 @@ export default {
     color_simple: '简洁',
     not_alpha: '不透明度',
     area_border_color: '地图边线',
-    area_base_color: '底图',
+    area_base_color: '地图区块填充',
     size: '大小',
     bar_width: '柱宽',
     bar_gap: '柱间隔',
@@ -995,8 +996,9 @@ export default {
     drag_block_value_axis_left: '左值轴',
     drag_block_value_axis_right: '右值轴',
     drag_block_table_data_column: '数据列',
-    drag_block_pie_angel: '扇区角度',
+    drag_block_pie_angle: '扇区角度',
     drag_block_pie_label: '扇区标签',
+    drag_block_pie_radius: '扇区半径',
     drag_block_gauge_angel: '指针角度',
     drag_block_label_value: '值',
     drag_block_funnel_width: '漏斗层宽',
@@ -1027,6 +1029,7 @@ export default {
     chart_mix: '柱线组合图',
     chart_mix_group_column: '分组柱线组合图',
     chart_mix_stack_column: '堆叠柱线组合图',
+    chart_mix_dual_line: '双线组合图',
     axis_value: '轴值',
     axis_value_min: '最小值',
     axis_value_max: '最大值',
@@ -1098,6 +1101,7 @@ export default {
     quarter_mom: '季环比',
     week_mom: '周环比',
     day_mom: '日环比',
+    data_pre: '具体数值',
     data_sub: '对比差值',
     data_percent: '差值百分比',
     compare_calc_expression: '计算公式',
@@ -1116,6 +1120,7 @@ export default {
     table_column_fixed: '固定列宽',
     table_column_custom: '自定义',
     chart_table_pivot: '透视表',
+    chart_table_heatmap: '热力图',
     table_pivot_row: '数据行',
     field_error_tips:
       '该字段所对应的数据集原始字段发生变更（包括维度、指标，字段类型，字段被删除等），建议重新编辑',
@@ -2017,6 +2022,7 @@ export default {
     datasource: '数据源',
     char_can_not_more_50: '不能超过50字符',
     char_2_64: '2-64个字符',
+    char_1_64: '1-64个字符',
     share_success: '分享成功',
     input_id: '请输入ID',
     input_pwd: '请输入密码',
@@ -2349,6 +2355,7 @@ export default {
     open_mode: '打开方式',
     new_window: '新开页面',
     now_window: '当前页面',
+    pop_window: '弹窗页面',
     hyperLinks: '目标地址',
     link_open_tips: '仪表板非编辑状态可打开链接',
     data_loading: '数据准备中...',
@@ -2441,6 +2448,7 @@ export default {
     dsExecuteTime: '数据源检测频率',
     frontTimeOut: '请求超时时间（秒）',
     logLiveTime: '操作日志保留时间（天）',
+    thresholdLogLiveTime: '阈值告警记录保留时间（天）',
     exportFileLiveTime: '后台导出文件保留时间（天）',
     platformOid: '第三方平台用户组织',
     platformRid: '第三方平台用户角色',
@@ -2605,8 +2613,8 @@ export default {
     form_manage: '表单管理',
     my_job: '我的填报',
     form: {
-      special_characters_are_not_supported: '不支持特殊字符',
       mobile_number_format_is_incorrect: '手机号码格式不正确',
+      email_format_is_incorrect: '邮箱格式不正确',
       name: '名称',
       rename: '重命名',
       untitled: '未命名表单',
@@ -2622,6 +2630,8 @@ export default {
       component_setting: '组件设置',
       hint: '提示词',
       input_limit_50: '不超过50个字符',
+      input_limit_max: '不超过{0}个字符',
+      input_limit_min: '不少于{0}个字符',
       option: '选项',
       form_setting: '表单设置',
       confirm_delete: '确认删除？(不会删除已创建的数据库表)',
@@ -2694,7 +2704,11 @@ export default {
       please_insert_end: '请输入结束时间',
       save_form: '保存表单',
       default: '默认',
-      default_built_in: '内建数据库'
+      default_built_in: '内建数据库',
+      lt_check: '值需要小于{0}',
+      gt_check: '值需要大于{0}',
+      le_check: '值需要小于等于{0}',
+      ge_check: '值需要大于等于{0}'
     },
     database: {
       nvarchar: '字符串',
@@ -2707,6 +2721,8 @@ export default {
       commit_time: '提交时间',
       confirm_delete: '确认删除?',
       add_data: '添加数据',
+      batch_upload: '批量上传',
+      download: '下载',
       download_template: '下载模板',
       insert_data: '插入数据',
       update_data: '更新数据',
@@ -2719,6 +2735,7 @@ export default {
       data_not_found: ']的数据不存在'
     },
     task: {
+      finish_rate_hint: '填报完成率=已填报数据条数/下发填报条数*100%',
       distribute_frequency: '发送频率',
       one_time: '仅下发一次',
       interval: '定期下发',
@@ -2726,6 +2743,9 @@ export default {
       task_distribute_setting: '任务下发设置',
       receive_object: '接收对象',
       receive_fit_column: '接收对象匹配字段',
+      form_template_setting: '表单模板设置',
+      template_setting: '模板设置',
+      component: '组件标题',
       receiver: '接收人',
       receiver_not_null: '接收人不能为空！',
       commit_type: '数据提交方式',
@@ -2769,7 +2789,7 @@ export default {
       assigned_task: '已下发任务',
       task_finish_in: '在任务下发',
       task_finish_in_suffix: '内完成填报',
-      open_sub_task: '查看子任务'
+      open_sub_task: '查看已下发任务'
     },
     on_the_left: '请在左侧选择表单',
     search_by_commit_name: '根据操作人名称搜索'
@@ -2783,6 +2803,8 @@ export default {
     name: '告警名称',
     grid_title: '告警管理',
     grid: '告警列表',
-    record: '告警记录'
+    record: '告警记录',
+    module_name: '阈值告警',
+    setting: '阈值告警设置'
   }
 }

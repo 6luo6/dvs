@@ -1,4 +1,8 @@
 <script lang="ts" setup>
+import logo from '@/assets/svg/logo.svg'
+import copilot from '@/assets/svg/copilot.svg'
+import dvAi from '@/assets/svg/dv-ai.svg'
+import dvPreviewDownload from '@/assets/svg/dv-preview-download.svg'
 import { computed, onMounted, ref } from 'vue'
 import { usePermissionStore } from '@/store/modules/permission'
 import { isExternal } from '@/utils/validate'
@@ -17,9 +21,8 @@ import { XpackComponent } from '@/components/plugin'
 import { useAppearanceStoreWithOut } from '@/store/modules/appearance'
 import AiComponent from '@/layout/components/AiComponent.vue'
 import { findBaseParams } from '@/api/aiComponent'
-import ExportExcel from '@/views/visualized/data/dataset/ExportExcel.vue'
 import AiTips from '@/layout/components/AiTips.vue'
-import Copilot from '@/layout/components/Copilot.vue'
+import CopilotCom from '@/layout/components/Copilot.vue'
 
 const appearanceStore = useAppearanceStoreWithOut()
 const { push } = useRouter()
@@ -49,9 +52,8 @@ const activeIndex = computed(() => {
 })
 
 const permissionStore = usePermissionStore()
-const ExportExcelRef = ref()
 const downloadClick = params => {
-  ExportExcelRef.value.init(params)
+  useEmitt().emitter.emit('data-export-center', params)
 }
 const routers: any[] = formatRoute(permissionStore.getRoutersNotHidden as AppCustomRouteRecordRaw[])
 const showSystem = ref(false)
@@ -116,25 +118,15 @@ onMounted(() => {
   initShowToolbox()
   initAiBase()
   initCopilotBase()
-  useEmitt({
-    name: 'data-export-center',
-    callback: function (params) {
-      ExportExcelRef.value.init(params)
-    }
-  })
 })
 </script>
 
 <template>
   <el-header class="header-flex" :class="{ 'header-light': navigateBg && navigateBg === 'light' }">
     <img class="logo" v-if="navigate" :src="navigate" alt="" />
-    <Icon
-      style="cursor: pointer"
-      v-else
-      @click="handleIconClick"
-      className="logo"
-      name="dvs"
-    ></Icon>
+    <Icon v-else @click="handleIconClick" className="logo" name="dvs"
+      ><logo class="svg-icon logo" style="cursor: pointer"
+    /></Icon>
     <el-menu
       :default-active="activeIndex"
       class="el-menu-demo"
@@ -146,24 +138,34 @@ onMounted(() => {
     </el-menu>
     <div class="operate-setting" v-if="!desktop">
       <XpackComponent jsname="c3dpdGNoZXI=" />
-      <el-icon style="margin: 0 10px" class="ai-icon copilot-icon" v-if="!showOverlayCopilot && appearanceStore.getShowAi">
-        <Icon name="copilot" @click="handleCopilotClick" />
+      <el-icon
+        style="margin: 0 10px"
+        class="ai-icon copilot-icon"
+        v-if="!showOverlayCopilot && appearanceStore.getShowCopilot"
+      >
+        <Icon name="copilot"><copilot @click="handleCopilotClick" class="svg-icon" /></Icon>
       </el-icon>
-      <Copilot @confirm="copilotConfirm" v-if="showOverlayCopilot && appearanceStore.getShowAi" class="copilot-icon-tips" />
+      <CopilotCom
+        @confirm="copilotConfirm"
+        v-if="showOverlayCopilot && appearanceStore.getShowCopilot"
+        class="copilot-icon-tips"
+      />
 
       <el-icon
         style="margin: 0 10px"
         class="ai-icon"
         v-if="aiBaseUrl && !showOverlay && appearanceStore.getShowAi"
       >
-        <Icon name="dv-ai" @click="handleAiClick" />
+        <Icon name="dv-ai"><dvAi @click="handleAiClick" class="svg-icon" /></Icon>
       </el-icon>
       <el-tooltip effect="dark" content="数据导出中心" placement="bottom">
         <el-icon
           class="preview-download_icon"
           :class="navigateBg === 'light' && 'is-light-setting'"
         >
-          <Icon name="dv-preview-download" @click="downloadClick" />
+          <Icon name="dv-preview-download"
+            ><dvPreviewDownload @click="downloadClick" class="svg-icon"
+          /></Icon>
         </el-icon>
       </el-tooltip>
 
@@ -181,10 +183,9 @@ onMounted(() => {
         :base-url="aiBaseUrl"
       ></ai-component>
       <div v-if="showOverlay && appearanceStore.getShowAi" class="overlay"></div>
-      <div v-if="showOverlayCopilot" class="overlay"></div>
+      <div v-if="showOverlayCopilot && appearanceStore.getShowCopilot" class="overlay"></div>
     </div>
   </el-header>
-  <ExportExcel ref="ExportExcelRef"></ExportExcel>
 </template>
 
 <style lang="less" scoped>

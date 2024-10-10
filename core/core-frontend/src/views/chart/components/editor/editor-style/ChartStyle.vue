@@ -27,9 +27,11 @@ import QuadrantSelector from '@/views/chart/components/editor/editor-style/compo
 import FlowMapLineSelector from '@/views/chart/components/editor/editor-style/components/FlowMapLineSelector.vue'
 import FlowMapPointSelector from '@/views/chart/components/editor/editor-style/components/FlowMapPointSelector.vue'
 import CommonEvent from '@/custom-component/common/CommonEvent.vue'
+import CommonBorderSetting from '@/custom-component/common/CommonBorderSetting.vue'
+import PictureGroupUploadAttr from '@/custom-component/picture-group/PictureGroupUploadAttr.vue'
 
 const dvMainStore = dvMainStoreWithOut()
-const { dvInfo, batchOptStatus } = storeToRefs(dvMainStore)
+const { dvInfo, batchOptStatus, curComponent } = storeToRefs(dvMainStore)
 const { t } = useI18n()
 
 const state = {
@@ -40,6 +42,10 @@ const state = {
 
 const props = defineProps({
   commonBackgroundPop: {
+    type: Object,
+    required: false
+  },
+  commonBorderPop: {
     type: Object,
     required: false
   },
@@ -90,8 +96,15 @@ const props = defineProps({
   }
 })
 
-const { chart, themes, properties, propertyInnerAll, commonBackgroundPop, selectorSpec } =
-  toRefs(props)
+const {
+  chart,
+  themes,
+  properties,
+  propertyInnerAll,
+  commonBackgroundPop,
+  commonBorderPop,
+  selectorSpec
+} = toRefs(props)
 const emit = defineEmits([
   'onColorChange',
   'onMiscChange',
@@ -104,6 +117,7 @@ const emit = defineEmits([
   'onLegendChange',
   'onBasicStyleChange',
   'onBackgroundChange',
+  'onStyleAttrChange',
   'onTableHeaderChange',
   'onTableCellChange',
   'onTableTotalChange',
@@ -129,6 +143,10 @@ const eventsShow = computed(() => {
     ['indicator', 'rich-text'].includes(chart.value.type) &&
     props.eventInfo
   )
+})
+
+const pictureGroupShow = computed(() => {
+  return curComponent.value?.innerType === 'picture-group'
 })
 
 const showProperties = (property: EditorProperty) => properties.value?.includes(property)
@@ -190,6 +208,19 @@ const onBasicStyleChange = (val, prop) => {
 
 const onBackgroundChange = (val, prop) => {
   state.initReady && emit('onBackgroundChange', val, prop)
+}
+
+const onActiveChange = val => {
+  state.initReady &&
+    emit('onStyleAttrChange', {
+      custom: 'style',
+      property: 'active',
+      value: commonBorderPop.value.borderActive
+    })
+}
+
+const onStyleAttrChange = ({ key, value }) => {
+  state.initReady && emit('onStyleAttrChange', { custom: 'style', property: key, value: value })
 }
 
 const onTableHeaderChange = (val, prop) => {
@@ -318,6 +349,21 @@ watch(
               component-position="component"
             />
           </el-collapse-item>
+          <collapse-switch-item
+            v-if="showProperties('border-style') && commonBorderPop && !batchOptStatus"
+            v-model="commonBorderPop.borderActive"
+            @modelChange="val => onActiveChange(val)"
+            :themes="themes"
+            :title="'边框'"
+            name="borderSetting"
+            class="common-style-area"
+          >
+            <common-border-setting
+              :style-info="commonBorderPop"
+              :themes="themes"
+              @onStyleAttrChange="onStyleAttrChange"
+            ></common-border-setting>
+          </collapse-switch-item>
           <el-collapse-item :effect="themes" name="events" title="事件" v-if="eventsShow">
             <common-event :themes="themes" :events-info="eventInfo"></common-event>
           </el-collapse-item>
@@ -555,17 +601,22 @@ watch(
             :change-model="chart.customStyle.yAxis"
             @modelChange="val => onChangeYAxisForm(val, 'show')"
             name="yAxis"
-            :title="selectorSpec['dual-y-axis-selector']?.title"
+            :title="selectorSpec['dual-y-axis-selector']?.title ?? t('chart.yAxis')"
           >
             <dual-y-axis-selector
               class="attr-selector"
-              :property-inner="propertyInnerAll['y-axis-selector']"
+              :property-inner="propertyInnerAll['dual-y-axis-selector']"
               :themes="themes"
               :chart="chart"
               @onChangeYAxisForm="onChangeYAxisForm"
               @onChangeYAxisExtForm="onChangeYAxisExtForm"
             />
           </collapse-switch-item>
+          <PictureGroupUploadAttr
+            v-if="pictureGroupShow"
+            :themes="themes"
+            :element="curComponent"
+          ></PictureGroupUploadAttr>
         </el-collapse>
       </el-row>
     </div>

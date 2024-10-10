@@ -1,5 +1,5 @@
 import type { Column, ColumnOptions } from '@antv/g2plot/esm/plots/column'
-import { cloneDeep, isEmpty } from 'lodash-es'
+import { cloneDeep, each, groupBy, isEmpty } from 'lodash-es'
 import {
   G2PlotChartView,
   G2PlotDrawOptions
@@ -12,13 +12,17 @@ import {
   setUpStackSeriesColor
 } from '@/views/chart/components/js/util'
 import type { Datum } from '@antv/g2plot'
-import { valueFormatter } from '@/views/chart/components/js/formatter'
+import { formatterItem, valueFormatter } from '@/views/chart/components/js/formatter'
 import {
   BAR_AXIS_TYPE,
   BAR_EDITOR_PROPERTY,
   BAR_EDITOR_PROPERTY_INNER
 } from '@/views/chart/components/js/panel/charts/bar/common'
-import { getPadding, setGradientColor } from '@/views/chart/components/js/panel/common/common_antv'
+import {
+  getLabel,
+  getPadding,
+  setGradientColor
+} from '@/views/chart/components/js/panel/common/common_antv'
 import { useI18n } from '@/hooks/web/useI18n'
 import { DEFAULT_LABEL } from '@/views/chart/components/editor/util/chart'
 import { clearExtremum, extremumEvt } from '@/views/chart/components/js/extremumUitl'
@@ -97,6 +101,7 @@ export class Bar extends G2PlotChartView<ColumnOptions, Column> {
   async drawChart(drawOptions: G2PlotDrawOptions<Column>): Promise<Column> {
     const { chart, container, action } = drawOptions
     if (!chart?.data?.data?.length) {
+      chart.container = container
       clearExtremum(chart)
       return
     }
@@ -264,24 +269,61 @@ export class Bar extends G2PlotChartView<ColumnOptions, Column> {
 export class StackBar extends Bar {
   propertyInner = {
     ...this['propertyInner'],
-    'label-selector': [...BAR_EDITOR_PROPERTY_INNER['label-selector'], 'vPosition'],
+    'label-selector': [
+      ...BAR_EDITOR_PROPERTY_INNER['label-selector'],
+      'vPosition',
+      'showTotal',
+      'totalColor',
+      'totalFontSize',
+      'totalFormatter',
+      'showStackQuota'
+    ],
     'tooltip-selector': ['fontSize', 'color', 'backgroundColor', 'tooltipFormatter', 'show']
   }
   protected configLabel(chart: Chart, options: ColumnOptions): ColumnOptions {
-    const baseOptions = super.configLabel(chart, options)
-    if (!baseOptions.label) {
-      return baseOptions
+    let label = getLabel(chart)
+    if (!label) {
+      return options
     }
+    options = { ...options, label }
     const { label: labelAttr } = parseJson(chart.customAttr)
-    baseOptions.label.style.fill = labelAttr.color
-    const label = {
-      ...baseOptions.label,
-      formatter: function (param: Datum) {
-        return valueFormatter(param.value, labelAttr.labelFormatter)
+    if (labelAttr.showStackQuota || labelAttr.showStackQuota === undefined) {
+      label.style.fill = labelAttr.color
+      label = {
+        ...label,
+        formatter: function (param: Datum) {
+          return valueFormatter(param.value, labelAttr.labelFormatter)
+        }
       }
+    } else {
+      label = false
+    }
+    if (labelAttr.showTotal) {
+      const formatterCfg = labelAttr.labelFormatter ?? formatterItem
+      each(groupBy(options.data, 'field'), (values, key) => {
+        const total = values.reduce((a, b) => a + b.value, 0)
+        const value = valueFormatter(total, formatterCfg)
+        if (!options.annotations) {
+          options = {
+            ...options,
+            annotations: []
+          }
+        }
+        options.annotations.push({
+          type: 'text',
+          position: [key, total],
+          content: `${value}`,
+          style: {
+            textAlign: 'center',
+            fontSize: labelAttr.fontSize,
+            fill: labelAttr.color
+          },
+          offsetY: -(parseInt(labelAttr.fontSize as unknown as string) / 2)
+        })
+      })
     }
     return {
-      ...baseOptions,
+      ...options,
       label
     }
   }
@@ -313,8 +355,52 @@ export class StackBar extends Bar {
     return this.configStackColor(chart, options)
   }
 
+  protected configData(chart: Chart, options: ColumnOptions): ColumnOptions {
+    const { xAxis, extStack, yAxis } = chart
+    const mainSort = xAxis.some(axis => axis.sort !== 'none')
+    const subSort = extStack.some(axis => axis.sort !== 'none')
+    if (mainSort || subSort) {
+      return options
+    }
+    const quotaSort = yAxis?.[0].sort !== 'none'
+    if (!quotaSort || !extStack.length || !yAxis.length) {
+      return options
+    }
+    const { data } = options
+    const mainAxisValueMap = data.reduce((p, n) => {
+      p[n.field] = p[n.field] ? p[n.field] + n.value : n.value || 0
+      return p
+    }, {})
+    const sort = yAxis[0].sort
+    data.sort((p, n) => {
+      if (sort === 'asc') {
+        return mainAxisValueMap[p.field] - mainAxisValueMap[n.field]
+      } else {
+        return mainAxisValueMap[n.field] - mainAxisValueMap[p.field]
+      }
+    })
+    return options
+  }
+
   public setupSeriesColor(chart: ChartObj, data?: any[]): ChartBasicStyle['seriesColor'] {
     return setUpStackSeriesColor(chart, data)
+  }
+
+  protected setupOptions(chart: Chart, options: ColumnOptions): ColumnOptions {
+    return flow(
+      this.configTheme,
+      this.configEmptyDataStrategy,
+      this.configColor,
+      this.configBasicStyle,
+      this.configLabel,
+      this.configTooltip,
+      this.configLegend,
+      this.configXAxis,
+      this.configYAxis,
+      this.configSlider,
+      this.configAnalyse,
+      this.configData
+    )(chart, options, {}, this)
   }
 
   constructor(name = 'bar-stack') {
@@ -376,6 +462,22 @@ export class GroupBar extends StackBar {
     return setUpGroupSeriesColor(chart, data)
   }
 
+  protected setupOptions(chart: Chart, options: ColumnOptions): ColumnOptions {
+    return flow(
+      this.configTheme,
+      this.configEmptyDataStrategy,
+      this.configColor,
+      this.configBasicStyle,
+      this.configLabel,
+      this.configTooltip,
+      this.configLegend,
+      this.configXAxis,
+      this.configYAxis,
+      this.configSlider,
+      this.configAnalyse
+    )(chart, options, {}, this)
+  }
+
   constructor(name = 'bar-group') {
     super(name)
     this.baseOptions = {
@@ -391,6 +493,10 @@ export class GroupBar extends StackBar {
  * 分组堆叠柱状图
  */
 export class GroupStackBar extends StackBar {
+  propertyInner = {
+    ...this['propertyInner'],
+    'label-selector': [...BAR_EDITOR_PROPERTY_INNER['label-selector'], 'vPosition']
+  }
   protected configTheme(chart: Chart, options: ColumnOptions): ColumnOptions {
     const baseOptions = super.configTheme(chart, options)
     const baseTheme = baseOptions.theme as object
@@ -403,6 +509,25 @@ export class GroupStackBar extends StackBar {
     return {
       ...options,
       theme
+    }
+  }
+
+  protected configLabel(chart: Chart, options: ColumnOptions): ColumnOptions {
+    const baseOptions = super.configLabel(chart, options)
+    if (!baseOptions.label) {
+      return baseOptions
+    }
+    const { label: labelAttr } = parseJson(chart.customAttr)
+    baseOptions.label.style.fill = labelAttr.color
+    const label = {
+      ...baseOptions.label,
+      formatter: function (param: Datum) {
+        return valueFormatter(param.value, labelAttr.labelFormatter)
+      }
+    }
+    return {
+      ...baseOptions,
+      label
     }
   }
 
@@ -427,6 +552,23 @@ export class GroupStackBar extends StackBar {
       tooltip
     }
   }
+
+  protected setupOptions(chart: Chart, options: ColumnOptions): ColumnOptions {
+    return flow(
+      this.configTheme,
+      this.configEmptyDataStrategy,
+      this.configColor,
+      this.configBasicStyle,
+      this.configLabel,
+      this.configTooltip,
+      this.configLegend,
+      this.configXAxis,
+      this.configYAxis,
+      this.configSlider,
+      this.configAnalyse
+    )(chart, options, {}, this)
+  }
+
   constructor(name = 'bar-group-stack') {
     super(name)
     this.baseOptions = {

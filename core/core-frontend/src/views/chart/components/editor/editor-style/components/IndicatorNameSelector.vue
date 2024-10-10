@@ -1,4 +1,7 @@
 <script lang="ts" setup>
+import icon_letterSpacing_outlined from '@/assets/svg/icon_letter-spacing_outlined.svg'
+import icon_bold_outlined from '@/assets/svg/icon_bold_outlined.svg'
+import icon_italic_outlined from '@/assets/svg/icon_italic_outlined.svg'
 import { PropType, computed, onMounted, reactive, watch, nextTick } from 'vue'
 import { useI18n } from '@/hooks/web/useI18n'
 import {
@@ -179,7 +182,9 @@ defineExpose({ getFormData })
           >
             <template #prefix>
               <el-icon>
-                <Icon name="icon_letter-spacing_outlined" />
+                <Icon name="icon_letter-spacing_outlined"
+                  ><icon_letterSpacing_outlined class="svg-icon"
+                /></Icon>
               </el-icon>
             </template>
             <el-option
@@ -209,7 +214,7 @@ defineExpose({ getFormData })
                 :class="{ dark: themes === 'dark', active: state.indicatorNameForm.isBolder }"
               >
                 <el-icon>
-                  <Icon name="icon_bold_outlined" />
+                  <Icon name="icon_bold_outlined"><icon_bold_outlined class="svg-icon" /></Icon>
                 </el-icon>
               </div>
             </el-tooltip>
@@ -232,7 +237,7 @@ defineExpose({ getFormData })
                 :class="{ dark: themes === 'dark', active: state.indicatorNameForm.isItalic }"
               >
                 <el-icon>
-                  <Icon name="icon_italic_outlined" />
+                  <Icon name="icon_italic_outlined"><icon_italic_outlined class="svg-icon" /></Icon>
                 </el-icon>
               </div>
             </el-tooltip>
@@ -373,7 +378,7 @@ defineExpose({ getFormData })
 }
 .remark-label {
   color: var(--N600, #646a73);
-  font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+  font-family: var(--de-custom_font, 'PingFang');
   font-size: 12px;
   font-style: normal;
   font-weight: 400;

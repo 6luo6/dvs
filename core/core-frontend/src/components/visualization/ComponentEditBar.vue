@@ -23,12 +23,12 @@
     <template v-if="element.component === 'VQuery' && showPosition === 'canvas'">
       <span title="添加查询条件">
         <el-icon class="bar-base-icon" @click="addQueryCriteria">
-          <Icon name="icon_add_outlined"></Icon
+          <Icon name="icon_add_outlined"><icon_add_outlined class="svg-icon" /></Icon
         ></el-icon>
       </span>
       <span title="编辑查询条件">
         <el-icon class="bar-base-icon" @click="editQueryCriteria">
-          <Icon name="icon_edit_outlined"></Icon
+          <Icon name="icon_edit_outlined"><icon_edit_outlined class="svg-icon" /></Icon
         ></el-icon>
       </span>
     </template>
@@ -40,7 +40,7 @@
     >
       <span>
         <el-icon class="bar-base-icon" @click="userViewEnlargeOpen($event, 'enlarge')">
-          <Icon name="dv-bar-enlarge" />
+          <Icon name="dv-bar-enlarge"><dvBarEnlarge class="svg-icon" /></Icon>
         </el-icon>
       </span>
     </el-tooltip>
@@ -52,7 +52,7 @@
     >
       <span>
         <el-icon class="bar-base-icon" @click="userViewEnlargeOpen($event, 'details')">
-          <Icon name="dv-details" />
+          <Icon name="dv-details"><dvDetails class="svg-icon" /></Icon>
         </el-icon>
       </span>
     </el-tooltip>
@@ -64,7 +64,7 @@
     >
       <span>
         <el-icon class="bar-base-icon" @click="datasetParamsInit">
-          <Icon name="icon_params_setting"></Icon>
+          <Icon name="icon_params_setting"><icon_params_setting class="svg-icon" /></Icon>
         </el-icon>
       </span>
     </el-tooltip>
@@ -82,17 +82,22 @@
       v-if="barShowCheck('unLinkage') && existLinkage"
     >
       <el-icon class="bar-base-icon" @click="clearLinkage">
-        <Icon name="dv-bar-unLinkage" />
+        <Icon name="dv-bar-unLinkage"><dvBarUnLinkage class="svg-icon" /></Icon>
       </el-icon>
     </span>
     <div v-if="barShowCheck('batchOpt')" class="bar-checkbox-area">
       <el-checkbox v-model="state.batchOptCheckModel" @change="batchOptChange" />
     </div>
 
-    <el-dropdown trigger="click" placement="right-start" v-if="barShowCheck('setting')">
+    <el-dropdown
+      trigger="click"
+      placement="right-start"
+      v-if="barShowCheck('setting')"
+      ref="curDropdown"
+    >
       <el-icon class="bar-base-icon">
         <el-tooltip :content="t('visualization.more')" effect="dark" placement="bottom">
-          <icon name="icon_more_outlined" />
+          <icon name="icon_more_outlined"><icon_more_outlined class="svg-icon" /></icon>
         </el-tooltip>
       </el-icon>
       <template #dropdown>
@@ -113,7 +118,7 @@
             >
             <el-dropdown-item
               style="padding: 0"
-              v-if="element.innerType !== 'rich-text' && barShowCheck('download')"
+              v-if="element.innerType !== 'rich-text' && barShowCheck('download') && showDownload"
               @click.prevent
             >
               <el-dropdown style="width: 100%" trigger="hover" placement="right-start">
@@ -143,8 +148,9 @@
             </el-dropdown-item>
           </template>
           <xpack-component
-            :chart-id="element.id"
+            :chart="element"
             jsname="L2NvbXBvbmVudC90aHJlc2hvbGQtd2FybmluZy9FZGl0QmFySGFuZGxlcg=="
+            @close-item="closeItem"
           />
           <el-dropdown-item divided @click="deleteComponent" v-if="barShowCheck('delete')"
             >删除</el-dropdown-item
@@ -155,11 +161,16 @@
     <el-dropdown
       trigger="click"
       placement="right-start"
-      v-if="element.innerType !== 'rich-text' && barShowCheck('previewDownload') && authShow"
+      v-if="
+        element.innerType !== 'rich-text' &&
+        barShowCheck('previewDownload') &&
+        authShow &&
+        showDownload
+      "
     >
       <el-icon @click="downloadClick" class="bar-base-icon">
         <el-tooltip :content="t('chart.export')" effect="dark" placement="bottom">
-          <icon name="dv-preview-download" />
+          <icon name="dv-preview-download"><dvPreviewDownload class="svg-icon" /></icon>
         </el-tooltip>
       </el-icon>
       <template #dropdown>
@@ -178,7 +189,9 @@
     </el-dropdown>
     <el-popover v-if="selectFieldShow" width="200" trigger="click" @mousedown="fieldsAreaDown">
       <template #reference>
-        <el-icon class="bar-base-icon"> <Icon name="database"></Icon></el-icon>
+        <el-icon class="bar-base-icon">
+          <Icon name="database"><database class="svg-icon" /></Icon
+        ></el-icon>
       </template>
       <fields-list :fields="state.curFields" :element="element" />
     </el-popover>
@@ -187,6 +200,15 @@
 </template>
 
 <script lang="ts" setup>
+import icon_edit_outlined from '@/assets/svg/icon_edit_outlined.svg'
+import icon_add_outlined from '@/assets/svg/icon_add_outlined.svg'
+import dvBarEnlarge from '@/assets/svg/dv-bar-enlarge.svg'
+import dvDetails from '@/assets/svg/dv-details.svg'
+import icon_params_setting from '@/assets/svg/icon_params_setting.svg'
+import dvBarUnLinkage from '@/assets/svg/dv-bar-unLinkage.svg'
+import database from '@/assets/svg/database.svg'
+import icon_more_outlined from '@/assets/svg/icon_more_outlined.svg'
+import dvPreviewDownload from '@/assets/svg/dv-preview-download.svg'
 import { computed, h, onBeforeUnmount, onMounted, reactive, ref, toRefs, watch } from 'vue'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { storeToRefs } from 'pinia'
@@ -566,11 +588,18 @@ const initCurFields = () => {
     }
   }
 }
+
+const showDownload = computed(() => canvasViewInfo.value[element.value.id]?.dataFrom !== 'template')
 // 富文本-End
 
 const datasetParamsSetShow = computed(() => {
   return canvasViewInfo.value[element.value.id]?.calParams?.length > 0
 })
+
+const curDropdown = ref()
+const closeItem = () => {
+  curDropdown.value.handleClose()
+}
 
 onMounted(() => {
   if (element.value.component === 'UserView') {

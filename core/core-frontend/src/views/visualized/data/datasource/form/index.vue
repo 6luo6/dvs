@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import icon_close_outlined from '@/assets/svg/icon_close_outlined.svg'
+import icon_searchOutline_outlined from '@/assets/svg/icon_search-outline_outlined.svg'
 import { reactive, ref, computed, watch, nextTick } from 'vue'
 import { ElIcon, ElMessage, ElMessageBox, ElMessageBoxOptions } from 'element-plus-secondary'
 import CreatDsGroup from './CreatDsGroup.vue'
@@ -20,6 +22,7 @@ import { cloneDeep } from 'lodash-es'
 import { useCache } from '@/hooks/web/useCache'
 import Icon from '@/components/icon-custom/src/Icon.vue'
 import { XpackComponent, PluginComponent } from '@/components/plugin'
+import { iconDatasourceMap } from '@/components/icon-group/datasource-list'
 
 interface Node {
   name: string
@@ -361,29 +364,34 @@ const validateDS = () => {
 }
 
 const doValidateDs = request => {
-  validate(request).then(res => {
-    if (res.data.type === 'API') {
-      let error = 0
-      const status = JSON.parse(res.data.status) as Array<{ status: string; name: string }>
-      for (let i = 0; i < status.length; i++) {
-        if (status[i].status === 'Error') {
-          error++
-        }
-        for (let j = 0; j < form.apiConfiguration.length; j++) {
-          if (status[i].name === form.apiConfiguration[j].name) {
-            form.apiConfiguration[j].status = status[i].status
+  dsLoading.value = true
+  validate(request)
+    .then(res => {
+      if (res.data.type === 'API') {
+        let error = 0
+        const status = JSON.parse(res.data.status) as Array<{ status: string; name: string }>
+        for (let i = 0; i < status.length; i++) {
+          if (status[i].status === 'Error') {
+            error++
+          }
+          for (let j = 0; j < form.apiConfiguration.length; j++) {
+            if (status[i].name === form.apiConfiguration[j].name) {
+              form.apiConfiguration[j].status = status[i].status
+            }
           }
         }
-      }
-      if (error === 0) {
-        ElMessage.success(t('datasource.validate_success'))
+        if (error === 0) {
+          ElMessage.success(t('datasource.validate_success'))
+        } else {
+          ElMessage.error('校验失败')
+        }
       } else {
-        ElMessage.error('校验失败')
+        ElMessage.success(t('datasource.validate_success'))
       }
-    } else {
-      ElMessage.success(t('datasource.validate_success'))
-    }
-  })
+    })
+    .finally(() => {
+      dsLoading.value = false
+    })
 }
 
 const typeTitle = computed(() => {
@@ -533,7 +541,8 @@ const defaultForm = {
   description: '',
   type: 'API',
   apiConfiguration: [],
-  paramsConfiguration: []
+  paramsConfiguration: [],
+  enableDataFill: false
 }
 const form = reactive<Form>(cloneDeep(defaultForm))
 const defaultForm2 = {
@@ -694,7 +703,7 @@ defineExpose({
         </el-steps>
       </div>
       <el-icon @click="close" class="datasource-close">
-        <Icon name="icon_close_outlined"></Icon>
+        <Icon name="icon_close_outlined"><icon_close_outlined class="svg-icon" /></Icon>
       </el-icon>
     </template>
     <div class="datasource">
@@ -708,7 +717,9 @@ defineExpose({
           >
             <template #prefix>
               <el-icon>
-                <Icon name="icon_search-outline_outlined"></Icon>
+                <Icon name="icon_search-outline_outlined"
+                  ><icon_searchOutline_outlined class="svg-icon"
+                /></Icon>
               </el-icon>
             </template>
           </el-input>
@@ -754,7 +765,9 @@ defineExpose({
             <span class="custom-tree-node flex-align-center">
               <el-icon v-if="!!data.catalog" class="icon-border" style="width: 18px; height: 18px">
                 <Icon v-if="data['isPlugin']" :static-content="data.icon"></Icon>
-                <Icon v-else :name="`${data.type}-ds`"></Icon>
+                <Icon v-else
+                  ><component class="svg-icon" :is="iconDatasourceMap[data.type]"></component
+                ></Icon>
               </el-icon>
               <span :title="node.label" class="label-tooltip">{{ node.label }}</span>
             </span>
@@ -859,6 +872,8 @@ defineExpose({
 
 <style lang="less">
 .datasource-drawer-fullscreen {
+  z-index: 1000 !important;
+
   .ed-drawer__body {
     padding: 0;
   }
@@ -972,7 +987,7 @@ defineExpose({
       .title {
         display: flex;
         justify-content: space-between;
-        font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+        font-family: var(--de-custom_font, 'PingFang');
         font-size: 14px;
         font-weight: 500;
         color: var(--TextPrimary, #1f2329);
@@ -1027,7 +1042,7 @@ defineExpose({
         width: 100%;
         padding: 16px 24px;
         color: #1f2329;
-        font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+        font-family: var(--de-custom_font, 'PingFang');
         font-size: 16px;
         font-style: normal;
         font-weight: 500;

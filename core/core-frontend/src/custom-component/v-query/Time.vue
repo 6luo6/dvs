@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { toRefs, PropType, ref, onBeforeMount, watch, nextTick, computed, inject } from 'vue'
+import { toRefs, PropType, ref, Ref, onBeforeMount, watch, nextTick, computed, inject } from 'vue'
 import { type DatePickType } from 'element-plus-secondary'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import type { ManipulateType } from 'dayjs'
@@ -25,6 +25,7 @@ interface SelectConfig {
   timeGranularity: DatePickType
   timeGranularityMultiple: DatePickType
   timeRange: TimeRange
+  placeholder: string
   setTimeRange: boolean
 }
 
@@ -61,6 +62,13 @@ const props = defineProps({
     type: Boolean,
     default: false
   }
+})
+const placeholder: Ref = inject('placeholder')
+const placeholderText = computed(() => {
+  if (placeholder.value.placeholderShow) {
+    return props.config.placeholder
+  }
+  return ' '
 })
 const selectValue = ref()
 const multiple = ref(false)
@@ -364,13 +372,13 @@ const setArrValue = () => {
     const [start, end] = selectValue.value || []
     if (selectSecond.value) {
       selectValue.value = [
-        start,
+        start ? start : new Date(`${currentDate.value.join('/')} ${currentTime.value.join(':')}`),
         new Date(`${currentDate.value.join('/')} ${currentTime.value.join(':')}`)
       ]
     } else {
       selectValue.value = [
         new Date(`${currentDate.value.join('/')} ${currentTime.value.join(':')}`),
-        end
+        end ? end : new Date(`${currentDate.value.join('/')} ${currentTime.value.join(':')}`)
       ]
     }
   } else {
@@ -412,9 +420,10 @@ const formatDate = computed(() => {
       ['datetimerange', 'daterange'].includes(config.timeGranularityMultiple) ? shortcuts : []
     "
     @change="handleValueChange"
+    :editable="false"
     :range-separator="$t('cron.to')"
-    :start-placeholder="$t('datasource.start_time')"
-    :end-placeholder="$t('datasource.end_time')"
+    :start-placeholder="placeholderText"
+    :end-placeholder="placeholderText"
   />
   <el-date-picker
     v-else
@@ -422,7 +431,7 @@ const formatDate = computed(() => {
     :type="config.timeGranularity"
     @change="handleValueChange"
     :style="selectStyle"
-    :placeholder="$t('commons.date.select_date_time')"
+    :placeholder="placeholderText"
   />
   <div
     v-if="dvMainStore.mobileInPc"

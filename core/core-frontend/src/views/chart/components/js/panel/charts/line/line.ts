@@ -42,6 +42,15 @@ export class Line extends G2PlotChartView<LineOptions, G2Line> {
   axis: AxisType[] = [...LINE_AXIS_TYPE, 'xAxisExt']
   axisConfig = {
     ...this['axisConfig'],
+    xAxis: {
+      name: `${t('chart.drag_block_type_axis')} / ${t('chart.dimension')}`,
+      type: 'd'
+    },
+    xAxisExt: {
+      name: `${t('chart.chart_group')} / ${t('chart.dimension')}`,
+      type: 'd',
+      limit: 1
+    },
     yAxis: {
       name: `${t('chart.drag_block_value_axis')} / ${t('chart.quota')}`,
       type: 'q'
@@ -49,7 +58,8 @@ export class Line extends G2PlotChartView<LineOptions, G2Line> {
   }
   async drawChart(drawOptions: G2PlotDrawOptions<G2Line>): Promise<G2Line> {
     const { chart, action, container } = drawOptions
-    if (!chart.data.data?.length) {
+    if (!chart.data?.data?.length) {
+      chart.container = container
       clearExtremum(chart)
       return
     }
@@ -285,6 +295,49 @@ export class Line extends G2PlotChartView<LineOptions, G2Line> {
   }
   public setupSeriesColor(chart: ChartObj, data?: any[]): ChartBasicStyle['seriesColor'] {
     return setUpGroupSeriesColor(chart, data)
+  }
+  protected configLegend(chart: Chart, options: LineOptions): LineOptions {
+    const optionTmp = super.configLegend(chart, options)
+    if (!optionTmp.legend) {
+      return optionTmp
+    }
+    const xAxisExt = chart.xAxisExt[0]
+    if (xAxisExt?.customSort?.length > 0) {
+      // 图例自定义排序
+      const l = optionTmp.legend
+      const basicStyle = parseJson(chart.customAttr).basicStyle
+      const sort = xAxisExt.customSort ?? []
+      const legendItems = []
+      sort.forEach((item, index) => {
+        legendItems.push({
+          name: item,
+          value: item,
+          marker: {
+            symbol: l.marker.symbol,
+            style: {
+              r: 4,
+              fill: basicStyle.colors[index % basicStyle.colors.length]
+            }
+          }
+        })
+      })
+      const legend = {
+        ...l,
+        custom: true,
+        items: legendItems
+      }
+      return {
+        ...optionTmp,
+        legend
+      }
+    }
+    optionTmp.legend.marker.style = style => {
+      return {
+        r: 4,
+        fill: style.stroke
+      }
+    }
+    return optionTmp
   }
   protected setupOptions(chart: Chart, options: LineOptions): LineOptions {
     return flow(

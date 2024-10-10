@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import icon_info_outlined from '@/assets/svg/icon_info_outlined.svg'
 import { PropType, computed, onMounted, reactive, watch, ref, inject } from 'vue'
 import { useI18n } from '@/hooks/web/useI18n'
 import { COLOR_PANEL, DEFAULT_TOOLTIP } from '@/views/chart/components/editor/util/chart'
@@ -7,12 +8,13 @@ import cloneDeep from 'lodash-es/cloneDeep'
 import defaultsDeep from 'lodash-es/defaultsDeep'
 import { formatterType, unitType } from '../../../js/formatter'
 import { fieldType } from '@/utils/attr'
-import { defaultTo, partition, map, includes } from 'lodash-es'
+import { defaultTo, partition, map, includes, isEmpty } from 'lodash-es'
 import chartViewManager from '../../../js/panel'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { storeToRefs } from 'pinia'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import Icon from '../../../../../../components/icon-custom/src/Icon.vue'
+import { iconFieldMap } from '@/components/icon-group/field-list'
 
 const { t } = useI18n()
 
@@ -94,10 +96,6 @@ const changeDataset = () => {
       })
     }
   })
-  if (showProperty('showFields')) {
-    state.tooltipForm.showFields = []
-    emit('onTooltipChange', { data: state.tooltipForm }, 'showFields')
-  }
 }
 
 const AXIS_PROP: AxisType[] = ['yAxis', 'yAxisExt', 'extBubble']
@@ -197,7 +195,8 @@ watch(
 
 const state = reactive({
   tooltipForm: {
-    tooltipFormatter: DEFAULT_TOOLTIP.tooltipFormatter
+    tooltipFormatter: DEFAULT_TOOLTIP.tooltipFormatter,
+    carousel: DEFAULT_TOOLTIP.carousel
   } as DeepPartial<ChartTooltipAttr>
 })
 
@@ -251,7 +250,7 @@ const init = () => {
 const showProperty = prop => {
   const instance = chartViewManager.getChartView(props.chart.render, props.chart.type)
   if (instance) {
-    return instance.propertyInner['tooltip-selector'].includes(prop)
+    return instance.propertyInner['tooltip-selector']?.includes(prop)
   }
   return props.propertyInner?.includes(prop)
 }
@@ -380,11 +379,17 @@ const updateAxis = (form: AxisEditForm) => {
   })
 }
 const allFields = computed(() => {
-  return defaultTo(props.allFields, [])
+  return defaultTo(props.allFields, []).map(item => ({
+    key: item.dataeaseName,
+    name: item.name,
+    value: `${item.dataeaseName}@${item.name}`,
+    disabled: false
+  }))
 })
 const defaultPlaceholder = computed(() => {
   if (state.tooltipForm.showFields && state.tooltipForm.showFields.length > 0) {
     return state.tooltipForm.showFields
+      .filter(field => !isEmpty(field))
       .map(field => {
         const v = field.split('@')
         return v[1] + ': ${' + field.split('@')[1] + '}'
@@ -393,6 +398,21 @@ const defaultPlaceholder = computed(() => {
   }
   return ''
 })
+watch(
+  () => allFields.value,
+  () => {
+    let result = []
+    state.tooltipForm.showFields?.forEach(field => {
+      if (allFields.value?.map(i => i.value).includes(field)) {
+        result.push(field)
+      }
+    })
+    state.tooltipForm.showFields = result
+    if (allFields.value.length > 0) {
+      changeTooltipAttr('showFields')
+    }
+  }
+)
 onMounted(() => {
   init()
   useEmitt({ name: 'addAxis', callback: updateSeriesTooltipFormatter })
@@ -482,9 +502,9 @@ onMounted(() => {
         >
           <el-option
             v-for="option in allFields"
-            :key="option.dataeaseName"
+            :key="option.key"
             :label="option.name"
-            :value="option.dataeaseName + '@' + option.name"
+            :value="option.value"
           />
         </el-select>
       </el-form-item>
@@ -499,7 +519,7 @@ onMounted(() => {
                 <div>可以${fieldName}的形式读取字段值（支持HTML）</div>
               </template>
               <el-icon class="hint-icon" :class="{ 'hint-icon--dark': themes === 'dark' }">
-                <Icon name="icon_info_outlined" />
+                <Icon name="icon_info_outlined"><icon_info_outlined class="svg-icon" /></Icon>
               </el-icon>
             </el-tooltip>
           </span>
@@ -621,10 +641,13 @@ onMounted(() => {
         >
           <template #prefix>
             <el-icon v-if="curSeriesFormatter.seriesId" style="font-size: 14px">
-              <Icon
-                :className="`field-icon-${fieldType[curSeriesFormatter.deType]}`"
-                :name="`field_${fieldType[curSeriesFormatter.deType]}`"
-              />
+              <Icon :className="`field-icon-${fieldType[curSeriesFormatter.deType]}`"
+                ><component
+                  class="svg-icon"
+                  :class="`field-icon-${fieldType[curSeriesFormatter.deType]}`"
+                  :is="iconFieldMap[fieldType[curSeriesFormatter.deType]]"
+                ></component
+              ></Icon>
             </el-icon>
           </template>
           <template v-for="item in state.tooltipForm.seriesTooltipFormatter" :key="item.seriesId">
@@ -637,10 +660,13 @@ onMounted(() => {
               v-if="showOption(item)"
             >
               <el-icon style="margin-right: 8px">
-                <Icon
-                  :className="`field-icon-${fieldType[item.deType]}`"
-                  :name="`field_${fieldType[item.deType]}`"
-                />
+                <Icon :className="`field-icon-${fieldType[item.deType]}`"
+                  ><component
+                    class="svg-icon"
+                    :class="`field-icon-${fieldType[item.deType]}`"
+                    :is="iconFieldMap[fieldType[item.deType]]"
+                  ></component
+                ></Icon>
               </el-icon>
               {{ item.name }}
               {{ item.summary !== '' ? '(' + t('chart.' + item.summary) + ')' : '' }}

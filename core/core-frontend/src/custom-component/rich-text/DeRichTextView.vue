@@ -6,6 +6,7 @@
     @keyup.stop
     @dblclick="setEdit"
     @click="onClick"
+    :style="richTextStyle"
   >
     <chart-error v-if="isError" :err-msg="errMsg" />
     <Editor
@@ -61,11 +62,15 @@ import { useEmitt } from '@/hooks/web/useEmitt'
 import { valueFormatter } from '@/views/chart/components/js/formatter'
 import { parseJson } from '@/views/chart/components/js/util'
 import { mappingColor } from '@/views/chart/components/js/panel/common/common_table'
+import { CHART_FONT_FAMILY } from '@/views/chart/components/editor/util/chart'
+import { useAppearanceStoreWithOut } from '@/store/modules/appearance'
 const snapshotStore = snapshotStoreWithOut()
 const errMsg = ref('')
 const dvMainStore = dvMainStoreWithOut()
 const { canvasViewInfo } = storeToRefs(dvMainStore)
 const isError = ref(false)
+const appearanceStore = useAppearanceStoreWithOut()
+
 const props = defineProps({
   scale: {
     type: Number,
@@ -104,6 +109,7 @@ const props = defineProps({
 const { element, editMode, active, disabled, showPosition } = toRefs(props)
 
 const state = reactive({
+  emptyValue: '-',
   data: null,
   viewDataInfo: null,
   totalItems: 0,
@@ -120,6 +126,21 @@ const canEdit = ref(false)
 // 初始化配置
 const tinymceId = 'tinymce-view-' + element.value.id
 const myValue = ref('')
+
+const systemFontFamily = appearanceStore.fontList.map(item => item.name)
+const curFontFamily = () => {
+  let result = ''
+  CHART_FONT_FAMILY.concat(
+    appearanceStore.fontList.map(ele => ({
+      name: ele.name,
+      value: ele.name
+    }))
+  ).forEach(font => {
+    result = result + font.name + '=' + font.name + ';'
+  })
+  return result
+}
+
 const init = ref({
   selector: '#' + tinymceId,
   toolbar_items_size: 'small',
@@ -135,8 +156,7 @@ const init = ref({
     'top-align center-align bottom-align | alignleft aligncenter alignright | bullist numlist |' +
     ' blockquote subscript superscript removeformat | table image ',
   toolbar_location: '/',
-  font_formats:
-    '阿里巴巴普惠体=阿里巴巴普惠体 3.0 55 Regular L3;微软雅黑=Microsoft YaHei;宋体=SimSun;黑体=SimHei;仿宋=FangSong;华文黑体=STHeiti;华文楷体=STKaiti;华文宋体=STSong;华文仿宋=STFangsong;Andale Mono=andale mono,times;Arial=arial,helvetica,sans-serif;Arial Black=arial black,avant garde;Book Antiqua=book antiqua,palatino;Comic Sans MS=comic sans ms,sans-serif;Courier New=courier new,courier;Georgia=georgia,palatino;Helvetica=helvetica;Impact=impact,chicago;Symbol=symbol;Tahoma=tahoma,arial,helvetica,sans-serif;Terminal=terminal,monaco;Times New Roman=times new roman,times;Trebuchet MS=trebuchet ms,geneva;Verdana=verdana,geneva;Webdings=webdings;Wingdings=wingdings',
+  font_formats: curFontFamily(),
   fontsize_formats: '12px 14px 16px 18px 20px 22px 24px 28px 32px 36px 42px 48px 56px 72px', // 字体大小
   menubar: false,
   placeholder: '',
@@ -144,7 +164,28 @@ const init = ref({
   inline: true, // 开启内联模式
   branding: false,
   icons: 'vertical-content',
-  vertical_align: element.value.propValue.verticalAlign
+  vertical_align: element.value.propValue.verticalAlign,
+  setup: function (editor) {
+    // 在表格调整大小开始时
+    editor.on('ObjectResizeStart', function (e) {
+      const { target, width, height } = e
+      if (target.nodeName === 'TABLE') {
+        // 将宽高根据缩放比例调整
+        // e.width = width / props.scale
+        // e.height = height / props.scale
+      }
+    })
+
+    // 在表格调整大小结束时
+    editor.on('ObjectResized', function (e) {
+      const { target, width, height } = e
+      if (target.nodeName === 'TABLE') {
+        // 将最终调整的宽高根据缩放比例重设
+        // target.style.width = `${width * props.scale}px`
+        // target.style.height = `${height  scaleFactor}px`
+      }
+    })
+  }
 })
 
 const editStatus = computed(() => {
@@ -163,6 +204,7 @@ watch(
       canEdit.value = false
       reShow()
       myValue.value = assignment(element.value.propValue.textValue)
+      console.log('===myValue.value=' + myValue.value)
       ed.setContent(myValue.value)
     }
   }
@@ -177,6 +219,7 @@ watch(
     }
     if (initReady.value && canEdit.value) {
       snapshotStore.recordSnapshotCache('renderChart', element.value.id)
+      initFontFamily(myValue.value)
     }
   }
 )
@@ -221,6 +264,23 @@ const initCurFieldsChange = () => {
   }
 }
 
+const jumpTargetAdaptor = () => {
+  setTimeout(() => {
+    const paragraphs = document.querySelectorAll('p')
+    paragraphs.forEach(p => {
+      // 如果 p 标签已经有 onclick 且包含 event.stopPropagation，则跳过
+      if (
+        p.getAttribute('onclick') &&
+        p.getAttribute('onclick').includes('event.stopPropagation()')
+      ) {
+        return // 已经有 stopPropagation，跳过
+      }
+      // 否则添加 onclick 事件
+      p.setAttribute('onclick', 'event.stopPropagation()')
+    })
+  }, 1000)
+}
+
 const assignment = content => {
   const on = content.match(/\[(.+?)\]/g)
   if (on) {
@@ -229,7 +289,7 @@ const assignment = content => {
       if (dataRowFiledName.value.includes(itm)) {
         const ele = itm.slice(1, -1)
         let value = dataRowNameSelect.value[ele] !== undefined ? dataRowNameSelect.value[ele] : null
-        let targetValue = !!value ? value : '-'
+        let targetValue = !!value ? value : state.emptyValue
         if (thresholdStyleInfo && thresholdStyleInfo[ele]) {
           const thresholdStyle = thresholdStyleInfo[ele]
           targetValue = `<span style="color:${thresholdStyle.color};background-color: ${thresholdStyle.backgroundColor}">${targetValue}</span>`
@@ -246,8 +306,21 @@ const assignment = content => {
   //De 本地跳转失效问题
   content = content.replace(/href="#\//g, 'href="/#/')
   content = content.replace(/href=\\"#\//g, 'href=\\"/#/')
+  content = content.replace(/href=\\"#\//g, 'href=\\"/#/')
   resetSelect()
+  initFontFamily(content)
+  jumpTargetAdaptor()
   return content
+}
+const initFontFamily = htmlText => {
+  const regex = /font-family:\s*([^;"]+);/g
+  let match
+  while ((match = regex.exec(htmlText)) !== null) {
+    const font = match[1].trim()
+    if (systemFontFamily.includes(font)) {
+      appearanceStore.setCurrentFont(font)
+    }
+  }
 }
 const fieldSelect = field => {
   const ed = tinymce.editors[tinymceId]
@@ -355,15 +428,23 @@ const editCursor = () => {
       plugins: 'table',
       setup: function (editor) {
         editor.on('init', function () {
-          console.log('====init====')
+          console.info('====init====')
         })
       }
     })
   }, 100)
 }
 
+const updateEmptyValue = view => {
+  state.emptyValue =
+    view?.senior?.functionCfg?.emptyDataStrategy === 'custom'
+      ? view.senior.functionCfg.emptyDataCustomValue || ''
+      : '-'
+}
+
 const calcData = (view: Chart, callback) => {
   isError.value = false
+  updateEmptyValue(view)
   if (view.tableId || view['dataFrom'] === 'template') {
     const v = JSON.parse(JSON.stringify(view))
     getData(v)
@@ -397,10 +478,13 @@ const calcData = (view: Chart, callback) => {
     state.viewDataInfo = {}
     state.totalItems = 0
     const curViewInfo = canvasViewInfo.value[element.value.id]
-    curViewInfo['curFields'] = []
-    dvMainStore.setViewDataDetails(element.value.id, state.viewDataInfo)
+    if (curViewInfo) {
+      curViewInfo['curFields'] = []
+      dvMainStore.setViewDataDetails(element.value.id, state.viewDataInfo)
+      initReady.value = true
+      initCurFields(curViewInfo)
+    }
     initReady.value = true
-    initCurFields(curViewInfo)
     callback?.()
     nextTick(() => {
       initReady.value = true
@@ -480,6 +564,7 @@ const initCurFields = chartDetails => {
 // 初始化此处不必刷新
 const renderChart = viewInfo => {
   //do renderView
+  updateEmptyValue(viewInfo)
   initCurFieldsChange()
   eventBus.emit('initCurFields-' + element.value.id)
 }
@@ -518,6 +603,8 @@ const conditionAdaptor = (chart: Chart) => {
   return res
 }
 
+const richTextStyle = computed(() => [{ '--de-canvas-scale': props.scale }])
+
 onMounted(() => {
   viewInit()
 })
@@ -539,6 +626,12 @@ defineExpose({
   div::-webkit-scrollbar {
     width: 0px !important;
     height: 0px !important;
+  }
+  ::v-deep(p) {
+    zoom: var(--de-canvas-scale);
+  }
+  ::v-deep(td span) {
+    zoom: var(--de-canvas-scale);
   }
 }
 

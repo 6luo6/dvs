@@ -4,9 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.dataease.api.chart.vo.ChartBaseVO;
 import io.dataease.api.chart.vo.ViewSelectorVO;
 import io.dataease.chart.dao.auto.entity.CoreChartView;
 import io.dataease.chart.dao.auto.mapper.CoreChartViewMapper;
+import io.dataease.chart.dao.ext.entity.ChartBasePO;
 import io.dataease.chart.dao.ext.mapper.ExtChartViewMapper;
 import io.dataease.dataset.dao.auto.entity.CoreDatasetTableField;
 import io.dataease.dataset.dao.auto.mapper.CoreDatasetTableFieldMapper;
@@ -17,12 +19,14 @@ import io.dataease.engine.constant.ExtFieldConstant;
 import io.dataease.engine.func.FunctionConstant;
 import io.dataease.engine.utils.Utils;
 import io.dataease.exception.DEException;
+import io.dataease.extensions.datasource.api.PluginManageApi;
 import io.dataease.extensions.datasource.dto.CalParam;
 import io.dataease.extensions.datasource.dto.DatasetTableFieldDTO;
 import io.dataease.extensions.datasource.model.SQLObj;
 import io.dataease.extensions.view.dto.*;
 import io.dataease.extensions.view.filter.FilterTreeObj;
 import io.dataease.i18n.Translator;
+import io.dataease.license.config.XpackInteract;
 import io.dataease.utils.BeanUtils;
 import io.dataease.utils.IDUtils;
 import io.dataease.utils.JsonUtil;
@@ -31,6 +35,7 @@ import io.dataease.visualization.dao.auto.mapper.DataVisualizationInfoMapper;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -60,6 +65,8 @@ public class ChartViewManege {
 
     @Resource
     private DatasetTableFieldManage datasetTableFieldManage;
+    @Autowired(required = false)
+    private PluginManageApi pluginManage;
 
     private ObjectMapper objectMapper = new ObjectMapper();
 
@@ -90,6 +97,10 @@ public class ChartViewManege {
 
     public void delete(Long id) {
         coreChartViewMapper.deleteById(id);
+    }
+
+    @XpackInteract(value = "chartViewManage")
+    public void disuse(List<Long> chartIdList) {
     }
 
     @Transactional
@@ -186,7 +197,7 @@ public class ChartViewManege {
                     BeanUtils.copyBean(dto, e);
                     return dto;
                 }).collect(Collectors.toList());
-                String originField = Utils.calcFieldRegex(ele.getOriginName(), tableObj, f, true, null, Utils.mergeParam(Utils.getParams(f), null));
+                String originField = Utils.calcFieldRegex(ele.getOriginName(), tableObj, f, true, null, Utils.mergeParam(Utils.getParams(f), null), pluginManage);
                 for (String func : FunctionConstant.AGG_FUNC) {
                     if (Utils.matchFunction(func, originField)) {
                         ele.setSummary("");
@@ -244,6 +255,30 @@ public class ChartViewManege {
         coreDatasetTableFieldMapper.delete(queryWrapper);
     }
 
+    public ChartBaseVO chartBaseInfo(Long id) {
+        ChartBasePO po = extChartViewMapper.queryChart(id);
+        if (ObjectUtils.isEmpty(po)) return null;
+        ChartBaseVO vo = BeanUtils.copyBean(new ChartBaseVO(), po);
+        TypeReference<List<ChartViewFieldDTO>> tokenType = new TypeReference<>() {
+        };
+        vo.setXAxis(JsonUtil.parseList(po.getXAxis(), tokenType));
+        vo.setXAxisExt(JsonUtil.parseList(po.getXAxisExt(), tokenType));
+        vo.setYAxis(JsonUtil.parseList(po.getYAxis(), tokenType));
+        vo.setYAxisExt(JsonUtil.parseList(po.getYAxisExt(), tokenType));
+        vo.setExtStack(JsonUtil.parseList(po.getExtStack(), tokenType));
+        vo.setExtBubble(JsonUtil.parseList(po.getExtBubble(), tokenType));
+        vo.setFlowMapStartName(JsonUtil.parseList(po.getFlowMapStartName(), tokenType));
+        vo.setFlowMapEndName(JsonUtil.parseList(po.getFlowMapEndName(), tokenType));
+        if (StringUtils.isBlank(po.getExtColor()) || StringUtils.equals("null", po.getExtColor())) {
+            vo.setExtColor(new ArrayList<>());
+        } else {
+            vo.setExtColor(JsonUtil.parseList(po.getExtColor(), tokenType));
+        }
+        vo.setExtLabel(JsonUtil.parseList(po.getExtLabel(), tokenType));
+        vo.setExtTooltip(JsonUtil.parseList(po.getExtTooltip(), tokenType));
+        return vo;
+    }
+
     public DatasetTableFieldDTO createCountField(Long id) {
         DatasetTableFieldDTO dto = new DatasetTableFieldDTO();
         dto.setId(-1L);
@@ -269,7 +304,7 @@ public class ChartViewManege {
             dto.setDatePattern("date_sub");
             dto.setChartType("bar");
 
-            if (dto.getId() == -1L || dto.getDeType() == 0 || dto.getDeType() == 1) {
+            if (dto.getId() == -1L || dto.getDeType() == 0 || dto.getDeType() == 1 || dto.getDeType() == 7) {
                 dto.setSummary("count");
             } else {
                 dto.setSummary("sum");
@@ -305,6 +340,9 @@ public class ChartViewManege {
         record.setDrillFields(objectMapper.writeValueAsString(dto.getDrillFields()));
         record.setCustomFilter(objectMapper.writeValueAsString(dto.getCustomFilter()));
         record.setViewFields(objectMapper.writeValueAsString(dto.getViewFields()));
+        record.setFlowMapStartName(objectMapper.writeValueAsString(dto.getFlowMapStartName()));
+        record.setFlowMapEndName(objectMapper.writeValueAsString(dto.getFlowMapEndName()));
+        record.setExtColor(objectMapper.writeValueAsString(dto.getExtColor()));
 
         return record;
     }
@@ -330,6 +368,9 @@ public class ChartViewManege {
         dto.setDrillFields(JsonUtil.parseList(record.getDrillFields(), tokenType));
         dto.setCustomFilter(JsonUtil.parseObject(record.getCustomFilter(), FilterTreeObj.class));
         dto.setViewFields(JsonUtil.parseList(record.getViewFields(), tokenType));
+        dto.setFlowMapStartName(JsonUtil.parseList(record.getFlowMapStartName(), tokenType));
+        dto.setFlowMapEndName(JsonUtil.parseList(record.getFlowMapEndName(), tokenType));
+        dto.setExtColor(JsonUtil.parseList(record.getExtColor(), tokenType));
 
         return dto;
 

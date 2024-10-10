@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import dvRichText from '@/assets/svg/dv-richText.svg'
+import dvScrollText from '@/assets/svg/dv-scroll-text.svg'
 import { toRefs } from 'vue'
 import eventBus from '@/utils/eventBus'
 import DragComponent from '@/custom-component/component-group/DragComponent.vue'
@@ -54,7 +56,7 @@ const newComponent = (componentName, innerType) => {
 	
     <drag-component
       :themes="themes"
-      icon="dv-richText"
+      :icon="dvRichText"
       label="富文本"
       drag-info="UserView&rich-text"
       v-on:click="newComponent('UserView', 'rich-text')"
@@ -62,7 +64,7 @@ const newComponent = (componentName, innerType) => {
     <drag-component
       v-if="dvModel === 'dataV'"
       :themes="themes"
-      icon="dv-scroll-text"
+      :icon="dvScrollText"
       label="跑马灯"
       drag-info="ScrollText&ScrollText"
       v-on:click="newComponent('ScrollText', 'ScrollText')"

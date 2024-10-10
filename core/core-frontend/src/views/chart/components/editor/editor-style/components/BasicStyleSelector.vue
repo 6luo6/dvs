@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, PropType, reactive, watch } from 'vue'
+import { computed, onMounted, PropType, reactive, watch } from 'vue'
 import {
   COLOR_PANEL,
   DEFAULT_BASIC_STYLE,
@@ -11,6 +11,8 @@ import { cloneDeep, defaultsDeep } from 'lodash-es'
 import { SERIES_NUMBER_FIELD } from '@antv/s2'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { storeToRefs } from 'pinia'
+import { isNumber } from 'mathjs'
+import { ElMessage } from 'element-plus-secondary'
 
 const dvMainStore = dvMainStoreWithOut()
 const { batchOptStatus } = storeToRefs(dvMainStore)
@@ -167,9 +169,25 @@ const changeFieldColumn = () => {
 }
 const changeFieldColumnWidth = () => {
   const { basicStyleForm, fieldColumnWidth } = state
+  let { width } = fieldColumnWidth
+  let validate = true
+  width = parseFloat(width)
+  if (isNaN(width) || !isNumber(width)) {
+    validate = false
+  }
+  if (width < 0 || width > 200) {
+    validate = false
+  }
   const fieldWidth = basicStyleForm.tableFieldWidth?.find(
     i => i.fieldId === fieldColumnWidth.fieldId
   )
+  if (!validate) {
+    ElMessage.warning('宽度需要在 0-200 之间')
+    if (fieldWidth) {
+      fieldColumnWidth.width = fieldWidth.width
+    }
+    return
+  }
   if (fieldWidth) {
     fieldWidth.width = fieldColumnWidth.width
     changeBasicStyle('tableFieldWidth')
@@ -218,6 +236,10 @@ const mapSymbolOptions = [
   { name: t('chart.line_symbol_diamond'), value: 'rhombus' }
 ]
 
+const customSymbolicMapSizeRange = computed(() => {
+  let { extBubble } = JSON.parse(JSON.stringify(props.chart))
+  return ['symbolic-map'].includes(props.chart.type) && extBubble?.length > 0
+})
 onMounted(() => {
   init()
 })
@@ -458,7 +480,49 @@ onMounted(() => {
                 :max="40"
                 v-model="state.basicStyleForm.mapSymbolSize"
                 @change="changeBasicStyle('mapSymbolSize')"
+                :disabled="customSymbolicMapSizeRange"
               />
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </div>
+      <div class="alpha-setting">
+        <label class="alpha-label" :class="{ dark: 'dark' === themes }">
+          {{ t('chart.size') }}区间
+        </label>
+        <el-row style="flex: 1">
+          <el-col :span="12">
+            <el-form-item class="form-item alpha-slider" :class="'form-item-' + themes">
+              <el-input
+                type="number"
+                :effect="themes"
+                v-model="state.basicStyleForm.mapSymbolSizeMin"
+                :min="0"
+                :max="100"
+                class="basic-input-number"
+                :controls="false"
+                @change="changeBasicStyle('mapSymbolSizeMin')"
+                :disabled="!customSymbolicMapSizeRange"
+              >
+                <template #suffix> PX </template>
+              </el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item class="form-item alpha-slider" :class="'form-item-' + themes">
+              <el-input
+                type="number"
+                :effect="themes"
+                v-model="state.basicStyleForm.mapSymbolSizeMax"
+                :min="0"
+                :max="100"
+                class="basic-input-number"
+                :controls="false"
+                @change="changeBasicStyle('mapSymbolSizeMax')"
+                :disabled="!customSymbolicMapSizeRange"
+              >
+                <template #suffix> PX </template>
+              </el-input>
             </el-form-item>
           </el-col>
         </el-row>
@@ -521,6 +585,8 @@ onMounted(() => {
           />
         </el-form-item>
       </el-col>
+    </el-row>
+    <el-row :gutter="8">
       <el-col :span="12" v-if="showProperty('areaBaseColor')">
         <el-form-item
           :label="t('chart.area_base_color')"
@@ -759,8 +825,6 @@ onMounted(() => {
         v-model.number="state.fieldColumnWidth.width"
         type="number"
         class="basic-input-number"
-        :min="0"
-        :max="100"
         :effect="themes"
         :disabled="batchOptStatus"
         @change="changeFieldColumnWidth()"

@@ -4,6 +4,7 @@ import io.dataease.engine.constant.DeTypeConstants;
 import io.dataease.engine.constant.ExtFieldConstant;
 import io.dataease.engine.constant.SQLConstants;
 import io.dataease.engine.utils.Utils;
+import io.dataease.extensions.datasource.api.PluginManageApi;
 import io.dataease.extensions.datasource.constant.SqlPlaceholderConstants;
 import io.dataease.extensions.datasource.dto.CalParam;
 import io.dataease.extensions.datasource.dto.DatasetTableFieldDTO;
@@ -22,7 +23,7 @@ import java.util.*;
  */
 public class Quota2SQLObj {
 
-    public static void quota2sqlObj(SQLMeta meta, List<ChartViewFieldDTO> fields, List<DatasetTableFieldDTO> originFields, boolean isCross, Map<Long, DatasourceSchemaDTO> dsMap, List<CalParam> fieldParam, List<CalParam> chartParam) {
+    public static void quota2sqlObj(SQLMeta meta, List<ChartViewFieldDTO> fields, List<DatasetTableFieldDTO> originFields, boolean isCross, Map<Long, DatasourceSchemaDTO> dsMap, List<CalParam> fieldParam, List<CalParam> chartParam, PluginManageApi pluginManage) {
         SQLObj tableObj = meta.getTable();
         if (ObjectUtils.isEmpty(tableObj)) {
             return;
@@ -38,7 +39,7 @@ public class Quota2SQLObj {
                 String originField;
                 if (ObjectUtils.isNotEmpty(y.getExtField()) && Objects.equals(y.getExtField(), ExtFieldConstant.EXT_CALC)) {
                     // 解析origin name中有关联的字段生成sql表达式
-                    String calcFieldExp = Utils.calcFieldRegex(y.getOriginName(), tableObj, originFields, isCross, dsMap, paramMap);
+                    String calcFieldExp = Utils.calcFieldRegex(y.getOriginName(), tableObj, originFields, isCross, dsMap, paramMap, pluginManage);
                     // 给计算字段处加一个占位符，后续SQL方言转换后再替换
                     originField = String.format(SqlPlaceholderConstants.CALC_FIELD_PLACEHOLDER, y.getId());
                     fieldsDialect.put(originField, calcFieldExp);
@@ -54,7 +55,7 @@ public class Quota2SQLObj {
                 // 处理纵轴字段
                 SQLObj ySQLObj = getYFields(y, originField, fieldAlias);
                 if (StringUtils.equalsIgnoreCase("bar-range", meta.getChartType()) && StringUtils.equalsIgnoreCase(y.getGroupType(), "d") && y.getDeType() == 1) {
-                    yFields.add(Dimension2SQLObj.getXFields(y, ySQLObj.getFieldName(), fieldAlias));
+                    yFields.add(Dimension2SQLObj.getXFields(y, ySQLObj.getFieldName(), fieldAlias, isCross));
                 } else {
                     yFields.add(ySQLObj);
                 }
@@ -99,6 +100,9 @@ public class Quota2SQLObj {
                 String cast = String.format(SQLConstants.CAST, originField, Objects.equals(y.getDeType(), DeTypeConstants.DE_INT) ? SQLConstants.DEFAULT_INT_FORMAT : SQLConstants.DEFAULT_FLOAT_FORMAT);
                 if (StringUtils.equalsIgnoreCase(y.getSummary(), "count_distinct")) {
                     fieldName = String.format(SQLConstants.AGG_FIELD, "COUNT", "DISTINCT " + cast);
+                } else if (y.getSummary() == null){
+                    // 透视表自定义汇总不用聚合
+                    fieldName = cast;
                 } else {
                     fieldName = String.format(SQLConstants.AGG_FIELD, y.getSummary(), cast);
                 }

@@ -33,8 +33,8 @@ export const DEFAULT_COLOR_CASE: DeepPartial<ChartAttr> = {
       lineConfig: {
         mapLineAnimate: true,
         mapLineGradient: false,
-        mapLineSourceColor: '#146C94',
-        mapLineTargetColor: '#576CBC'
+        mapLineSourceColor: '#1E90FF',
+        mapLineTargetColor: '#90EE90'
       }
     },
     nameFontColor: '#000000',
@@ -282,8 +282,8 @@ export const DEFAULT_MISC: ChartMiscAttr = {
       mapLineWidth: 1,
       mapLineAnimateDuration: 3,
       mapLineGradient: false,
-      mapLineSourceColor: '#146C94',
-      mapLineTargetColor: '#576CBC',
+      mapLineSourceColor: '#1E90FF',
+      mapLineTargetColor: '#90EE90',
       alpha: 100
     },
     pointConfig: {
@@ -298,6 +298,12 @@ export const DEFAULT_MISC: ChartMiscAttr = {
         speed: 0.01
       }
     }
+  },
+  wordCloudAxisValueRange: {
+    auto: true,
+    min: 0,
+    max: 0,
+    fieldId: undefined
   }
 }
 
@@ -329,7 +335,12 @@ export const DEFAULT_LABEL: ChartLabelAttr = {
     show: false,
     precision: 2,
     text: '转化率'
-  }
+  },
+  showTotal: false,
+  totalFontSize: 12,
+  totalColor: '#FFF',
+  totalFormatter: formatterItem,
+  showStackQuota: false
 }
 export const DEFAULT_TOOLTIP: ChartTooltipAttr = {
   show: true,
@@ -428,7 +439,7 @@ export const DEFAULT_TITLE_STYLE: ChartTextStyle = {
   remarkShow: false,
   remark: '',
   remarkBackgroundColor: '#ffffff',
-  fontFamily: 'Microsoft YaHei',
+  fontFamily: '',
   letterSpace: '0',
   fontShadow: false
 }
@@ -477,7 +488,7 @@ export const DEFAULT_TITLE_STYLE_BASE: ChartTextStyle = {
   isBolder: true,
   remarkShow: false,
   remark: '',
-  fontFamily: 'Microsoft YaHei',
+  fontFamily: '',
   letterSpace: '0',
   fontShadow: false,
   color: '',
@@ -723,6 +734,7 @@ export const DEFAULT_FUNCTION_CFG: ChartFunctionCfg = {
   sliderFillBg: '#BCD6F1',
   sliderTextColor: '#999999',
   emptyDataStrategy: 'breakLine',
+  emptyDataCustomValue: '',
   emptyDataFieldCtrl: []
 }
 export const DEFAULT_ANIMATE: ChartAnimate = {
@@ -1188,6 +1200,13 @@ export const CHART_TYPE_CONFIGS = [
         value: 'table-pivot',
         title: t('chart.chart_table_pivot'),
         icon: 'table-pivot'
+      },
+      {
+        render: 'antv',
+        category: 'table',
+        value: 't-heatmap',
+        title: t('chart.chart_table_heatmap'),
+        icon: 't-heatmap'
       }
     ]
   },
@@ -1475,12 +1494,19 @@ export const CHART_TYPE_CONFIGS = [
         value: 'chart-mix-stack',
         title: t('chart.chart_mix_stack_column'),
         icon: 'chart-mix-stack'
+      },
+      {
+        render: 'antv',
+        category: 'dual_axes',
+        value: 'chart-mix-dual-line',
+        title: t('chart.chart_mix_dual_line'),
+        icon: 'chart-mix-dual-line'
       }
     ]
   },
   {
     category: 'other',
-    title: '富文本',
+    title: '其他',
     display: 'hidden',
     details: [
       {
@@ -1489,6 +1515,13 @@ export const CHART_TYPE_CONFIGS = [
         value: 'rich-text',
         title: '富文本',
         icon: 'rich-text'
+      },
+      {
+        render: 'custom',
+        category: 'quota',
+        value: 'picture-group',
+        title: '图片组',
+        icon: 'picture-group'
       }
     ]
   }
@@ -1557,7 +1590,9 @@ export const DEFAULT_BASIC_STYLE: ChartBasicStyle = {
   summaryLabel: '总计',
   seriesColor: [],
   layout: 'horizontal',
-  mapColorField: ''
+  mapColorField: '',
+  mapSymbolSizeMin: 4,
+  mapSymbolSizeMax: 30
 }
 
 export const DEFAULT_MODAL: ModalSetting = {

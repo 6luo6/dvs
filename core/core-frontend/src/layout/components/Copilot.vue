@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import copilot from '@/assets/svg/copilot.svg'
 import { onMounted, ref } from 'vue'
 const visible = ref(true)
 const emits = defineEmits(['confirm'])
@@ -32,7 +33,7 @@ onMounted(() => {
     <template #reference>
       <div class="copilot-popper-tips-icon">
         <el-icon style="margin: 2px" class="ai-icon">
-          <Icon name="copilot" />
+          <Icon name="copilot"><copilot class="svg-icon" /></Icon>
         </el-icon>
       </div>
     </template>
@@ -54,13 +55,13 @@ onMounted(() => {
 .copilot-popper-tips-content {
   color: rgba(255, 255, 255, 1);
   .title {
-    font-family: PingFang SC;
+    font-family: var(--de-custom_font, 'PingFang');
     font-size: 20px;
     font-weight: 500;
     line-height: 28px;
   }
   .content {
-    font-family: PingFang SC;
+    font-family: var(--de-custom_font, 'PingFang');
     font-size: 14px;
     font-weight: 500;
     line-height: 22px;

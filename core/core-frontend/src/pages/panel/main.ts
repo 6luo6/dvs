@@ -54,7 +54,6 @@ document.querySelector('head').appendChild = <T extends Node>(node: T) => {
   return newNode
 }
 import { App, createApp } from 'vue'
-import '../../assets/font/index.css'
 import '@/style/index.less'
 import 'normalize.css/normalize.css'
 import '@antv/s2/dist/style.min.css'
@@ -78,6 +77,7 @@ const setupAll = async (
   resourceId: string
 ): Promise<App<Element>> => {
   const app = createApp(AppElement, { componentName: type })
+  app.provide('embeddedParams', { chartId, resourceId, dvId, pid, busiFlag, outerParams })
   await setupI18n(app)
   setupStore(app)
   setupRouter(app)
@@ -91,7 +91,6 @@ const setupAll = async (
   embeddedStore.setBaseUrl(baseUrl)
   embeddedStore.setDvId(dvId)
   embeddedStore.setPid(pid)
-  embeddedStore.setChartId(chartId)
   embeddedStore.setResourceId(resourceId)
   const directive = await import('@/directive')
   directive.installDirective(app)
@@ -168,20 +167,14 @@ class DataEaseBi {
   }
 
   destroy() {
-    import('@/store/modules/user').then(res => {
-      const userStore = res.userStore()
-      userStore.setUser()
-    })
     const embeddedStore = useEmbedded()
     embeddedStore.setType(null)
     embeddedStore.setBusiFlag(null)
     embeddedStore.setOuterParams(null)
     embeddedStore.setToken(null)
     embeddedStore.setBaseUrl(null)
-    embeddedStore.setDvId(null)
-    embeddedStore.setPid(null)
     embeddedStore.setChartId(null)
-    embeddedStore.setResourceId(null)
+    embeddedStore.clearState()
     this.vm.unmount()
     this.type = null
     this.token = null

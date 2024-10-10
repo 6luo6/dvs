@@ -22,12 +22,16 @@
             :content="tooltipItem[item.pkey]"
             placement="top"
           >
-            <el-icon class="info-tips"><Icon name="dv-info"></Icon></el-icon>
+            <el-icon class="info-tips"
+              ><Icon name="dv-info"><dvInfo class="svg-icon" /></Icon
+            ></el-icon>
           </el-tooltip>
         </div>
         <div class="info-item-content">
           <div class="info-item-pwd" v-if="item.type === 'pwd'">
-            <span>{{ pwdItem[item.pkey]['hidden'] ? '********' : item.pval }}</span>
+            <span class="info-item-pwd-span">{{
+              pwdItem[item.pkey]['hidden'] ? '********' : item.pval
+            }}</span>
 
             <el-tooltip
               v-if="props.copyList.includes(item.pkey)"
@@ -37,7 +41,7 @@
             >
               <el-button text @click="copyVal(item.pval)" class="setting-tip-btn">
                 <template #icon>
-                  <Icon name="de-copy"></Icon>
+                  <Icon name="de-copy"><deCopy class="svg-icon" /></Icon>
                 </template>
               </el-button>
             </el-tooltip>
@@ -49,7 +53,12 @@
             >
               <el-button text @click="switchPwd(item.pkey)" class="setting-tip-btn">
                 <template #icon>
-                  <Icon :name="pwdItem[item.pkey]['hidden'] ? 'eye' : 'eye-open'"></Icon>
+                  <Icon
+                    ><component
+                      class="svg-icon"
+                      :is="pwdItem[item.pkey]['hidden'] ? eye : eyeOpen"
+                    ></component
+                  ></Icon>
                 </template>
               </el-button>
             </el-tooltip>
@@ -67,7 +76,7 @@
             >
               <el-button text @click="copyVal(item.pval)" class="setting-tip-btn">
                 <template #icon>
-                  <Icon name="de-copy"></Icon>
+                  <Icon name="de-copy"><deCopy class="svg-icon" /></Icon>
                 </template>
               </el-button>
             </el-tooltip>
@@ -78,6 +87,10 @@
   </div>
 </template>
 <script lang="ts" setup>
+import eye from '@/assets/svg/eye.svg'
+import eyeOpen from '@/assets/svg/eye-open.svg'
+import dvInfo from '@/assets/svg/dv-info.svg'
+import deCopy from '@/assets/svg/de-copy.svg'
 import { ref, defineProps, PropType, computed } from 'vue'
 import { useI18n } from '@/hooks/web/useI18n'
 import { SettingRecord, ToolTipRecord } from './SettingTemplate'
@@ -255,11 +268,17 @@ formatLabel()
         .info-item-pwd {
           height: 22px;
           line-height: 22px;
-
+          width: 100%;
           display: flex;
           align-items: center;
           i {
             margin-left: 2px;
+          }
+          .info-item-pwd-span {
+            max-width: calc(100% - 84px);
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
           }
         }
       }

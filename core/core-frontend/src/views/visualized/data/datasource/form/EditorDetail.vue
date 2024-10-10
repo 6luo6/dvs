@@ -1,4 +1,14 @@
 <script lang="ts" setup>
+import icon_calendar_outlined from '@/assets/svg/icon_calendar_outlined.svg'
+import icon_rename_outlined from '@/assets/svg/icon_rename_outlined.svg'
+import icon_down_outlined from '@/assets/svg/icon_down_outlined.svg'
+import icon_down_outlined1 from '@/assets/svg/icon_down_outlined-1.svg'
+import icon_add_outlined from '@/assets/svg/icon_add_outlined.svg'
+import deCopy from '@/assets/svg/de-copy.svg'
+import deDelete from '@/assets/svg/de-delete.svg'
+import icon_warning_filled from '@/assets/svg/icon_warning_filled.svg'
+import icon_deleteTrash_outlined from '@/assets/svg/icon_delete-trash_outlined.svg'
+import icon_edit_outlined from '@/assets/svg/icon_edit_outlined.svg'
 import { ref, reactive, h, computed, toRefs, nextTick, watch } from 'vue'
 import { useI18n } from '@/hooks/web/useI18n'
 import type { FormInstance, FormRules } from 'element-plus-secondary'
@@ -15,6 +25,7 @@ import { ElForm, ElMessage, ElMessageBox } from 'element-plus-secondary'
 import Cron from '@/components/cron/src/Cron.vue'
 import { ComponentPublicInstance } from 'vue'
 import { XpackComponent } from '@/components/plugin'
+import { iconFieldMap } from '@/components/icon-group/field-list'
 const { t } = useI18n()
 const prop = defineProps({
   form: {
@@ -55,10 +66,10 @@ const state = reactive({
 })
 
 const schemas = ref([])
+const loading = ref(false)
 const dsForm = ref<FormInstance>()
 
 const cronEdit = ref(true)
-const calendar = h(Icon, { name: 'icon_calendar_outlined' })
 
 const defaultRule = {
   name: [
@@ -68,9 +79,9 @@ const defaultRule = {
       trigger: 'blur'
     },
     {
-      min: 2,
+      min: 1,
       max: 64,
-      message: t('datasource.input_limit_2_25', [2, 64]),
+      message: t('datasource.input_limit_1_64', [1, 64]),
       trigger: 'blur'
     }
   ]
@@ -502,10 +513,15 @@ const getDsSchema = () => {
     if (val) {
       const request = JSON.parse(JSON.stringify(form.value))
       request.configuration = Base64.encode(JSON.stringify(request.configuration))
-      getSchema(request).then(res => {
-        schemas.value = res.data
-        ElMessage.success(t('commons.success'))
-      })
+      loading.value = true
+      getSchema(request)
+        .then(res => {
+          schemas.value = res.data
+          ElMessage.success(t('commons.success'))
+        })
+        .finally(() => {
+          loading.value = false
+        })
     }
   })
 }
@@ -600,7 +616,7 @@ const apiObjRules = {
 const setActiveName = val => {
   gridData.value = val.fields
   activeParamsName.value = val.name
-  activeParamsName.value = val.serialNumber
+  activeParamsID.value = val.serialNumber
 }
 
 const paramsObjRef = ref()
@@ -681,18 +697,18 @@ const delParams = data => {
     autofocus: false,
     showClose: false
   }).then(() => {
-    gridData.value.splice(form.value.apiConfiguration.indexOf(data), 1)
+    gridData.value.splice(gridData.value.indexOf(data), 1)
   })
 }
 const datasetTypeList = [
   {
     label: '重命名',
-    svgName: 'icon_rename_outlined',
+    svgName: icon_rename_outlined,
     command: 'rename'
   },
   {
     label: '删除',
-    svgName: 'icon_delete-trash_outlined',
+    svgName: icon_deleteTrash_outlined,
     command: 'delete'
   }
 ]
@@ -722,6 +738,7 @@ defineExpose({
         label-width="180px"
         label-position="top"
         require-asterisk-position="right"
+        v-loading="loading"
       >
         <el-form-item
           :label="t('auth.datasource') + t('chart.name')"
@@ -753,7 +770,7 @@ defineExpose({
             </el-tabs>
             <el-button type="primary" style="margin-left: auto" @click="() => addApiItem(null)">
               <template #icon>
-                <Icon name="icon_add_outlined"></Icon>
+                <Icon name="icon_add_outlined"><icon_add_outlined class="svg-icon" /></Icon>
               </template>
               {{ t('common.add') }}
             </el-button>
@@ -784,7 +801,7 @@ defineExpose({
                   </el-col>
                   <el-col style="text-align: right" :span="5">
                     <el-icon class="de-copy-icon hover-icon" @click.stop="copyItem(api)">
-                      <Icon name="de-copy"></Icon>
+                      <Icon name="de-copy"><deCopy class="svg-icon" /></Icon>
                     </el-icon>
 
                     <span @click.stop>
@@ -798,12 +815,14 @@ defineExpose({
                       >
                         <template #reference>
                           <el-icon class="de-delete-icon hover-icon">
-                            <Icon name="de-delete"></Icon>
+                            <Icon name="de-delete"><deDelete class="svg-icon" /></Icon>
                           </el-icon>
                         </template>
                         <template #default>
                           <el-icon class="de-copy-icon icon-warning">
-                            <Icon name="icon_warning_filled"></Icon>
+                            <Icon name="icon_warning_filled"
+                              ><icon_warning_filled class="svg-icon"
+                            /></Icon>
                           </el-icon>
                           <div class="tips">
                             {{ t('datasource.delete_this_item') }}
@@ -853,7 +872,7 @@ defineExpose({
                 <span class="label">{{ ele.name }}</span>
                 <span class="name-copy">
                   <el-icon class="hover-icon" @click.stop="handleApiParams('edit', ele)">
-                    <icon name="icon_edit_outlined"></icon>
+                    <icon name="icon_edit_outlined"><icon_edit_outlined class="svg-icon" /></icon>
                   </el-icon>
                   <handle-more
                     icon-size="24px"
@@ -881,8 +900,11 @@ defineExpose({
                     <div class="flex-align-center icon">
                       <el-icon>
                         <Icon
-                          :className="`field-icon-${fieldType[scope.row.deType]}`"
-                          :name="`field_${fieldType[scope.row.deType]}`"
+                          ><component
+                            class="svg-icon"
+                            :class="`field-icon-${fieldType[scope.row.deType]}`"
+                            :is="iconFieldMap[fieldType[scope.row.deType]]"
+                          ></component
                         ></Icon>
                       </el-icon>
                       {{ fieldTypeText[scope.row.deType] }}
@@ -894,7 +916,9 @@ defineExpose({
                   <template #default="scope">
                     <el-button text @click.stop="delParams(scope.row)">
                       <template #icon>
-                        <Icon name="icon_delete-trash_outlined"></Icon>
+                        <Icon name="icon_delete-trash_outlined"
+                          ><icon_deleteTrash_outlined class="svg-icon"
+                        /></Icon>
                       </template>
                     </el-button>
                   </template>
@@ -904,7 +928,7 @@ defineExpose({
           </div>
         </template>
         <template v-if="notapiexcelconfig">
-          <el-form-item label="连接方式" prop="type">
+          <el-form-item label="连接方式" prop="type" v-if="form.type !== 'es'">
             <el-radio-group v-model="form.configuration.urlType">
               <el-radio label="hostName">主机名</el-radio>
               <el-radio label="jdbcUrl">JDBC 连接</el-radio>
@@ -926,7 +950,7 @@ defineExpose({
           <el-form-item
             :label="t('datasource.host')"
             prop="configuration.host"
-            v-if="form.configuration.urlType !== 'jdbcUrl'"
+            v-if="form.configuration.urlType !== 'jdbcUrl' && form.type !== 'es'"
           >
             <el-input
               v-model="form.configuration.host"
@@ -937,7 +961,7 @@ defineExpose({
           <el-form-item
             :label="t('datasource.port')"
             prop="configuration.port"
-            v-if="form.configuration.urlType !== 'jdbcUrl'"
+            v-if="form.configuration.urlType !== 'jdbcUrl' && form.type !== 'es'"
           >
             <el-input-number
               v-model="form.configuration.port"
@@ -953,7 +977,7 @@ defineExpose({
           <el-form-item
             :label="t('datasource.data_base')"
             prop="configuration.dataBase"
-            v-if="form.configuration.urlType !== 'jdbcUrl'"
+            v-if="form.configuration.urlType !== 'jdbcUrl' && form.type !== 'es'"
           >
             <el-input
               v-model="form.configuration.dataBase"
@@ -1005,6 +1029,17 @@ defineExpose({
               {{ t('datasource.kerbers_info') }}
             </p>
           </el-form-item>
+          <el-form-item
+            v-if="form.type == 'es'"
+            :label="$t('datasource.datasource_url')"
+            prop="configuration.url"
+          >
+            <el-input
+              v-model="form.configuration.url"
+              :placeholder="$t('datasource.please_input_datasource_url')"
+              autocomplete="off"
+            />
+          </el-form-item>
           <el-form-item :label="t('datasource.user_name')" v-if="form.type !== 'presto'">
             <el-input
               :placeholder="t('common.inputText') + t('datasource.user_name')"
@@ -1041,7 +1076,7 @@ defineExpose({
               <span class="name">{{ t('datasource.schema') }}<i class="required" /></span>
               <el-button text size="small" @click="getDsSchema()">
                 <template #icon>
-                  <Icon name="icon_add_outlined"></Icon>
+                  <Icon name="icon_add_outlined"><icon_add_outlined class="svg-icon" /></Icon>
                 </template>
                 {{ t('datasource.get_schema') }}
               </el-button>
@@ -1059,7 +1094,7 @@ defineExpose({
           </el-form-item>
           <el-form-item
             :label="t('datasource.extra_params')"
-            v-if="form.configuration.urlType !== 'jdbcUrl'"
+            v-if="form.configuration.urlType !== 'jdbcUrl' && form.type !== 'es'"
           >
             <el-input
               :placeholder="t('common.inputText') + t('datasource.extra_params')"
@@ -1074,7 +1109,12 @@ defineExpose({
               @click="showSSH = !showSSH"
               >SSH 设置
               <el-icon>
-                <Icon :name="showSSH ? 'icon_down_outlined' : 'icon_down_outlined-1'"></Icon>
+                <Icon
+                  ><component
+                    class="svg-icon"
+                    :is="showSSH ? icon_down_outlined : icon_down_outlined1"
+                  ></component
+                ></Icon>
               </el-icon>
             </span>
           </el-form-item>
@@ -1158,7 +1198,11 @@ defineExpose({
               @click="showPriority = !showPriority"
               >{{ t('datasource.priority') }}
               <el-icon>
-                <Icon :name="showPriority ? 'icon_down_outlined' : 'icon_down_outlined-1'"></Icon>
+                <Icon
+                  ><component
+                    :is="showPriority ? icon_down_outlined : icon_down_outlined1"
+                  ></component
+                ></Icon>
               </el-icon>
             </span>
           </el-form-item>
@@ -1321,7 +1365,7 @@ defineExpose({
             <el-date-picker
               v-model="form.syncSetting.startTime"
               class="de-date-picker"
-              :prefix-icon="calendar"
+              :prefix-icon="icon_calendar_outlined"
               type="datetime"
               :placeholder="t('datasource.start_time')"
             />
@@ -1335,7 +1379,7 @@ defineExpose({
               <el-date-picker
                 v-model="form.syncSetting.endTime"
                 class="de-date-picker"
-                :prefix-icon="calendar"
+                :prefix-icon="icon_calendar_outlined"
                 type="datetime"
                 :placeholder="t('datasource.end_time')"
               />
@@ -1436,7 +1480,7 @@ defineExpose({
   }
 
   .de-expand {
-    font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+    font-family: var(--de-custom_font, 'PingFang');
     font-size: 14px;
     font-weight: 400;
     line-height: 22px;
@@ -1523,7 +1567,7 @@ defineExpose({
       width: 100%;
       display: flex;
       align-items: center;
-      font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+      font-family: var(--de-custom_font, 'PingFang');
       font-size: 14px;
       font-style: normal;
       font-weight: 400;
@@ -1543,7 +1587,7 @@ defineExpose({
         position: relative;
         color: #1f2329;
         font-weight: 400;
-        font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+        font-family: var(--de-custom_font, 'PingFang');
         font-size: 14px;
         font-style: normal;
         line-height: 22px;
@@ -1595,7 +1639,7 @@ defineExpose({
   border-radius: 4px;
   margin: 0 0 16px 16px;
   padding: 16px;
-  font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+  font-family: var(--de-custom_font, 'PingFang');
   cursor: pointer;
 
   &:hover {
@@ -1674,7 +1718,7 @@ defineExpose({
   }
 
   .tips {
-    font-family: '阿里巴巴普惠体 3.0 55 Regular L3';
+    font-family: var(--de-custom_font, 'PingFang');
     font-size: 14px;
     font-weight: 500;
     line-height: 22px;

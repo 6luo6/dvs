@@ -36,19 +36,15 @@ public class DeTaskExecutor {
     public void init() {
     }
 
-    public void addThresholdTask(Long taskId, String cron, Long startTime, Long endTime) {
+    public void addThresholdTask(Long taskId, String cron) {
         String key = taskId.toString();
         JobKey jobKey = new JobKey(key, THRESHOLD_JOB_GROUP);
         TriggerKey triggerKey = new TriggerKey(key, THRESHOLD_JOB_GROUP);
         JobDataMap jobDataMap = new JobDataMap();
         jobDataMap.put("taskId", taskId);
         jobDataMap.put("threshold", taskId);
-        Date end = null;
-        if (CronUtils.taskExpire(endTime)) {
-            return;
-        }
-        if (ObjectUtils.isNotEmpty(endTime)) end = new Date(endTime);
-        scheduleManager.addOrUpdateCronJob(jobKey, triggerKey, DeXpackScheduleJob.class, cron, new Date(startTime), end, jobDataMap);
+        Date startDate = new Date();
+        scheduleManager.addOrUpdateCronJob(jobKey, triggerKey, DeXpackScheduleJob.class, cron, startDate, null, jobDataMap);
     }
 
     public void addOrUpdateTask(Long taskId, String cron, Long startTime, Long endTime) {

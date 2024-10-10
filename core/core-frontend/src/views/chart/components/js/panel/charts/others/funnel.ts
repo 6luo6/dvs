@@ -14,6 +14,7 @@ const { t } = useI18n()
 export class Funnel extends G2PlotChartView<FunnelOptions, G2Funnel> {
   properties: EditorProperty[] = [
     'background-overall-component',
+    'border-style',
     'basic-style-selector',
     'label-selector',
     'tooltip-selector',
@@ -24,6 +25,7 @@ export class Funnel extends G2PlotChartView<FunnelOptions, G2Funnel> {
   ]
   propertyInner: EditorPropertyInner = {
     'background-overall-component': ['all'],
+    'border-style': ['all'],
     'basic-style-selector': ['colors', 'alpha', 'seriesColor'],
     'label-selector': ['fontSize', 'color', 'hPosition', 'showQuota', 'conversionTag'],
     'tooltip-selector': ['color', 'fontSize', 'backgroundColor', 'seriesTooltipFormatter', 'show'],
@@ -147,11 +149,14 @@ export class Funnel extends G2PlotChartView<FunnelOptions, G2Funnel> {
               fontSize: l.fontSize
             },
             formatter: datum => {
+              if (!datum['$$conversion$$'][0]) {
+                return `${conversionTagAtt.text ?? ''} -`
+              }
               const rate = (
                 (datum['$$conversion$$'][1] / datum['$$conversion$$'][0]) *
                 100
               ).toFixed(conversionTagAtt.precision)
-              return `${conversionTagAtt.text ?? ''}${rate}%`
+              return `${conversionTagAtt.text ?? ''} ${rate}%`
             }
           }
         }

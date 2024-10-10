@@ -1,8 +1,8 @@
 export const positionData = [
-  { key: 'left', label: 'X', min: -1000, max: 20000, step: 10 },
-  { key: 'width', label: 'W', min: 10, max: 20000, step: 10 },
-  { key: 'top', label: 'Y', min: -1000, max: 20000, step: 10 },
-  { key: 'height', label: 'H', min: 10, max: 20000, step: 10 }
+  { key: 'left', label: 'X', min: -1000, max: 20000, step: 1 },
+  { key: 'width', label: 'W', min: 10, max: 20000, step: 1 },
+  { key: 'top', label: 'Y', min: -1000, max: 20000, step: 1 },
+  { key: 'height', label: 'H', min: 10, max: 20000, step: 1 }
 ]
 
 export const multiDimensionalData = [
@@ -99,8 +99,17 @@ export const selectKey = ['textAlign', 'borderStyle', 'verticalAlign']
 
 export const horizontalPosition = ['headHorizontalPosition']
 
-export const fieldType = ['text', 'time', 'value', 'value', 'value', 'location']
-export const fieldTypeText = ['文本', '时间', '数值', '数值(小数)', '数值', '地理位置']
+export const fieldType = ['text', 'time', 'value', 'value', 'value', 'location', 'binary', 'url']
+export const fieldTypeText = [
+  '文本',
+  '时间',
+  '数值',
+  '数值(小数)',
+  '数值',
+  '地理位置',
+  '文件',
+  'URL'
+]
 
 export const optionMap = {
   textAlign: textAlignOptions,

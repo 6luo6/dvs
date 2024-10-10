@@ -28,7 +28,7 @@ const embeddedRouteWhiteList = ['/dataset-embedded', '/dataset-form', '/dataset-
 router.beforeEach(async (to, from, next) => {
   start()
   loadStart()
-  checkPlatform()
+  const platform = checkPlatform()
   let isDesktop = wsCache.get('app.desktop')
   if (isDesktop === null) {
     await appStore.setAppModel()
@@ -38,7 +38,16 @@ router.beforeEach(async (to, from, next) => {
     done()
     loadDone()
     if (to.name === 'link') {
-      window.location.href = window.origin+location.pathname + '/mobile.html#' + to.path
+      let linkQuery = ''
+      if (Object.keys(to.query)) {
+        const tempQuery = Object.keys(to.query)
+          .map(key => key + '=' + to.query[key])
+          .join('&')
+        if (tempQuery) {
+          linkQuery = '?' + tempQuery
+        }
+      }
+      window.location.href = window.origin+location.pathname + '/mobile.html#' + to.path + linkQuery
     } else if (to.path === '/dvCanvas') {
       //next('/notSupport')
       window.location.href = window.origin+location.pathname + 'mobile.html#' + to.path
@@ -51,6 +60,7 @@ router.beforeEach(async (to, from, next) => {
     }
   }
   await appearanceStore.setAppearance()
+  await appearanceStore.setFontList()
   if ((wsCache.get('user.token') || isDesktop) && !to.path.startsWith('/de-link/')) {
     if (!userStore.getUid) {
       await userStore.setUser()
@@ -121,14 +131,15 @@ router.beforeEach(async (to, from, next) => {
       permissionStore.setCurrentPath(to.path)
       next()
     } else if (
-      embeddedWindowWhiteList.includes(to.path) ||
+      (!platform && embeddedWindowWhiteList.includes(to.path)) ||
       whiteList.includes(to.path) ||
       to.path.startsWith('/de-link/')
     ) {
+      await appearanceStore.setFontList()
       permissionStore.setCurrentPath(to.path)
       next()
     } else {
-      next(`/login?redirect=${to.path}`) // 否则全部重定向到登录页
+      next(`/login?redirect=${to.fullPath || to.path}`) // 否则全部重定向到登录页
     }
   }
 })

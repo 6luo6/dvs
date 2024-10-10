@@ -1,8 +1,13 @@
 <script lang="ts" setup>
+import icon_info_outlined from '@/assets/svg/icon_info_outlined.svg'
+import icon_linkRecord_outlined from '@/assets/svg/icon_link-record_outlined.svg'
+import icon_viewinchat_outlined from '@/assets/svg/icon_viewinchat_outlined.svg'
+import icon_drilling_outlined from '@/assets/svg/icon_drilling_outlined.svg'
 import { useI18n } from '@/hooks/web/useI18n'
 import ChartComponentG2Plot from './components/ChartComponentG2Plot.vue'
 import DeIndicator from '@/custom-component/indicator/DeIndicator.vue'
 import TextIndicator from '@/custom-component/indicator/TextIndicator.vue'
+import { useAppearanceStoreWithOut } from '@/store/modules/appearance'
 import { useAppStoreWithOut } from '@/store/modules/app'
 import router from '@/router'
 import { useEmbedded } from '@/store/modules/embedded'
@@ -23,7 +28,7 @@ import {
   watch
 } from 'vue'
 import { useEmitt } from '@/hooks/web/useEmitt'
-import { hexColorToRGBA } from '@/views/chart/components/js/util.js'
+import { hexColorToRGBA, parseJson } from '@/views/chart/components/js/util.js'
 import {
   CHART_FONT_FAMILY_MAP,
   DEFAULT_TITLE_STYLE
@@ -43,6 +48,7 @@ import { storeToRefs } from 'pinia'
 import { checkAddHttp, setIdValueTrans } from '@/utils/canvasUtils'
 import { Base64 } from 'js-base64'
 import DeRichTextView from '@/custom-component/rich-text/DeRichTextView.vue'
+import DePictureGroup from '@/custom-component/picture-group/Component.vue'
 import ChartEmptyInfo from '@/views/chart/components/views/components/ChartEmptyInfo.vue'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
 import { findById } from '@/api/visualization/dataVisualization'
@@ -60,13 +66,21 @@ const isShowModal = ref(false)
 const modalUrl = ref('')
 let innerRefreshTimer = null
 const appStore = useAppStoreWithOut()
+const appearanceStore = useAppearanceStoreWithOut()
 const isDataEaseBi = computed(() => appStore.getIsDataEaseBi)
 const isIframe = computed(() => appStore.getIsIframe)
 
 const emit = defineEmits(['onPointClick'])
 
-const { nowPanelJumpInfo, publicLinkStatus, dvInfo, curComponent, canvasStyleData, mobileInPc } =
-  storeToRefs(dvMainStore)
+const {
+  nowPanelJumpInfo,
+  publicLinkStatus,
+  dvInfo,
+  curComponent,
+  canvasStyleData,
+  mobileInPc,
+  inMobile
+} = storeToRefs(dvMainStore)
 
 const props = defineProps({
   active: {
@@ -115,17 +129,18 @@ const props = defineProps({
     required: false,
     default: 1
   },
-  dvType:{}
+  dvType: {}
 })
 const dynamicAreaId = ref('')
 const { view, showPosition, element, active, searchCount, scale } = toRefs(props)
 
-const titleShow = computed(
-  () =>
-    element.value.innerType !== 'rich-text' &&
+const titleShow = computed(() => {
+  return (
+    !['rich-text', 'picture-group'].includes(element.value.innerType) &&
     state.title_show &&
     showPosition.value !== 'viewDialog'
-)
+  )
+})
 const snapshotStore = snapshotStoreWithOut()
 
 const state = reactive({
@@ -274,10 +289,19 @@ const initTitle = () => {
       state.title_class.textAlign = customStyle.text.hPosition as CSSProperties['textAlign']
       state.title_class.fontStyle = customStyle.text.isItalic ? 'italic' : 'normal'
       state.title_class.fontWeight = customStyle.text.isBolder ? 'bold' : 'normal'
-
+      if (!!appearanceStore.fontList.length) {
+        appearanceStore.fontList.forEach(ele => {
+          CHART_FONT_FAMILY_MAP[ele.name] = ele.name
+        })
+      }
       state.title_class.fontFamily = customStyle.text.fontFamily
         ? CHART_FONT_FAMILY_MAP[customStyle.text.fontFamily]
         : DEFAULT_TITLE_STYLE.fontFamily
+      if (!CHART_FONT_FAMILY_MAP[customStyle.text.fontFamily]) {
+        state.title_class.fontFamily = appearanceStore.fontList.find(ele => ele.isDefault)?.name
+        customStyle.text.fontFamily = state.title_class.fontFamily
+      }
+      appearanceStore.setCurrentFont(state.title_class.fontFamily)
       state.title_class.letterSpacing =
         (customStyle.text.letterSpace
           ? customStyle.text.letterSpace
@@ -366,32 +390,60 @@ const divEmbedded = type => {
   useEmitt().emitter.emit('changeCurrentComponent', type)
 }
 
-const windowsJump = (url, jumpType, jumpInfo) => {
-//弹框
-  if (jumpType == 'modal') {
-    //内部跳转 && 宽度自适应
-    if (jumpInfo.linkType == 'inner' && jumpInfo.targetDvId && modalSetting.value.isBodyFit) {
-      findById(jumpInfo.targetDvId, props.dvType).then(res => {
-        let canvasStyleData = JSON.parse(res.data.canvasStyleData)
-        _modalSetting.value.title = res.data.name
-        if(modalSetting.value.isBodyFit){
-          _modalSetting.value.width = canvasStyleData.width + 'px'
-          _modalSetting.value.height = canvasStyleData.height + 'px'
-        }
+const windowsJump = (url, jumpType, jumpInfo, size = 'middle') => {
+  try {
+    let newWindow
+    //弹框
+    if (jumpType == 'modal') {
+      //内部跳转 && 宽度自适应
+      if (jumpInfo.linkType == 'inner' && jumpInfo.targetDvId && modalSetting.value.isBodyFit) {
+        findById(jumpInfo.targetDvId, props.dvType).then(res => {
+          let canvasStyleData = JSON.parse(res.data.canvasStyleData)
+          _modalSetting.value.title = res.data.name
+          if (modalSetting.value.isBodyFit) {
+            _modalSetting.value.width = canvasStyleData.width + 'px'
+            _modalSetting.value.height = canvasStyleData.height + 'px'
+          }
+          isShowModal.value = true
+          modalUrl.value = (location.origin + location.pathname).replace('mobile.html', '') + url
+        })
+      } else {
         isShowModal.value = true
         modalUrl.value = (location.origin + location.pathname).replace('mobile.html', '') + url
-      })
+      }
+      return
+    } else if ('newPop' === jumpType) {
+      let sizeX, sizeY
+      if (size === 'large') {
+        sizeX = 0.95
+        sizeY = 0.9
+      } else if (size === 'middle') {
+        sizeX = 0.8
+        sizeY = 0.75
+      } else {
+        sizeX = 0.6
+        sizeY = 0.5
+      }
+      const height = screen.height * sizeY
+      const width = screen.width * sizeX
+      const left = screen.width * ((1 - sizeX) / 2)
+      const top = screen.height * ((1 - sizeY) / 2)
+      newWindow = window.open(
+        url,
+        '_blank',
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,scrollbars=yes,resizable=yes,location=no`
+      )
+    } else if ('_self' === jumpType) {
+      newWindow = window.open(url, jumpType)
+      if (inMobile) {
+        window.location.reload()
+      }
     } else {
-      isShowModal.value = true
-      modalUrl.value = (location.origin + location.pathname).replace('mobile.html', '') + url
+      newWindow = window.open(url, jumpType)
     }
-    return
-  }
-  try {
-    const newWindow = window.open(url, jumpType)
     initOpenHandler(newWindow)
   } catch (e) {
-    ElMessage.error(t('visualization.url_check_error') + ':' + url)
+    console.warn(t('visualization.url_check_error') + ':' + url)
   }
 }
 
@@ -439,7 +491,7 @@ const jumpClick = param => {
             }?jumpInfoParam=${encodeURIComponent(Base64.encode(JSON.stringify(param)))}`
             const currentUrl = window.location.href
             localStorage.setItem('beforeJumpUrl', currentUrl)
-            windowsJump(url, jumpInfo.jumpType, jumpInfo)
+            windowsJump(url, jumpInfo.jumpType, jumpInfo, jumpInfo.windowSize)
           } else {
             ElMessage.warning(t('visualization.public_link_tips'))
           }
@@ -462,7 +514,7 @@ const jumpClick = param => {
             router.push(parseUrl(url))
             return
           }
-          windowsJump(url, jumpInfo.jumpType ,jumpInfo)
+          windowsJump(url, jumpInfo.jumpType, jumpInfo, jumpInfo.windowSize)
         }
       } else {
         ElMessage.warning('未指定跳转仪表板')
@@ -481,7 +533,7 @@ const jumpClick = param => {
         return
       }
 
-      windowsJump(url, jumpInfo.jumpType,jumpInfo)
+      windowsJump(url, jumpInfo.jumpType, jumpInfo, jumpInfo.windowSize)
     }
   } else {
   }
@@ -544,13 +596,83 @@ onBeforeMount(() => {
 const listenerEnable = computed(() => {
   return !showPosition.value.includes('viewDialog')
 })
+const showEmpty = ref(false)
+const checkFieldIsAllowEmpty = (allField?) => {
+  showEmpty.value = false
+  if (view.value?.render && view.value?.type) {
+    const chartView = chartViewManager.getChartView(view.value.render, view.value.type)
+    const map = parseJson(view.value.customAttr).map
+    if (['bubble-map', 'map'].includes(view.value?.type) && !map?.id) {
+      showEmpty.value = true
+      return
+    }
+    const axisConfigMap = new Map(Object.entries(chartView.axisConfig))
+    // 验证拖入的字段是否包含在当前数据集字段中，如果一个都不在数据集字段中，则显示空图表
+    let includeDatasetField = false
+    if (allField && allField.length > 0) {
+      axisConfigMap.forEach((value, key) => {
+        if (view.value?.[key]?.length > 0) {
+          view.value[key].forEach(item => {
+            if (!allField.find(field => field.id === item.id)) {
+              includeDatasetField = true
+              return false
+            }
+          })
+          if (includeDatasetField) {
+            return false
+          }
+        }
+      })
+    }
+    if (includeDatasetField) {
+      showEmpty.value = true
+      return
+    }
+    axisConfigMap.forEach((value, key) => {
+      // 不允许为空,并且没限制长度
+      if (!value['allowEmpty'] && !value['limit'] && view.value?.[key]?.length === 0) {
+        showEmpty.value = true
+        return false
+      }
+      // 不允许为空， 限制长度
+      if (
+        !value['allowEmpty'] &&
+        value['limit'] &&
+        view.value?.[key]?.length < parseInt(value['limit'])
+      ) {
+        showEmpty.value = true
+        return false
+      }
+      if (view.value?.type === 'table-info' && view.value?.[key]?.length === 0) {
+        showEmpty.value = true
+        return false
+      }
+    })
+  }
+}
+const changeChartType = () => {
+  checkFieldIsAllowEmpty()
+}
+const changeDataset = () => {
+  checkFieldIsAllowEmpty()
+}
 onMounted(() => {
   if (!view.value.isPlugin) {
-    queryData(true && !showPosition.value.includes('viewDialog'))
+    queryData(!showPosition.value.includes('viewDialog'))
   }
   if (!listenerEnable.value) {
     return
   }
+  useEmitt({
+    name: 'checkShowEmpty',
+    callback: param => {
+      if (param.view?.id === view.value.id) {
+        checkFieldIsAllowEmpty(param.allFields)
+      }
+    }
+  })
+  useEmitt({ name: 'chart-type-change', callback: changeChartType })
+  useEmitt({ name: 'dataset-change', callback: changeDataset })
   useEmitt({
     name: 'clearPanelLinkage',
     callback: function (param) {
@@ -676,7 +798,7 @@ const chartAreaShow = computed(() => {
       return true
     }
   }
-  if (view.value.type === 'rich-text') {
+  if (['rich-text', 'picture-group'].includes(view.value.type)) {
     return true
   }
   if (view.value?.isPlugin) {
@@ -820,9 +942,9 @@ const closeModal = () => {
 }
 
 let _modalSetting = ref({
-  title:"",
-  width:"",
-  height:""
+  title: '',
+  width: '',
+  height: ''
 })
 const modalSetting = computed<ModalSetting>(() => {
   return { ...(view.value.senior.modalSetting || {}), ..._modalSetting.value }
@@ -871,29 +993,33 @@ const modalSetting = computed<ModalSetting>(() => {
               <div style="white-space: pre-wrap" v-html="state.title_remark.remark"></div>
             </template>
             <el-icon :size="iconSize" class="inner-icon">
-              <Icon name="icon_info_outlined" />
+              <Icon name="icon_info_outlined"><icon_info_outlined class="svg-icon" /></Icon>
             </el-icon>
           </el-tooltip>
           <el-tooltip :effect="toolTip" placement="top" content="已设置联动" v-if="hasLinkIcon">
             <el-icon :size="iconSize" class="inner-icon">
-              <Icon name="icon_link-record_outlined" />
+              <Icon name="icon_link-record_outlined"
+                ><icon_linkRecord_outlined class="svg-icon"
+              /></Icon>
             </el-icon>
           </el-tooltip>
           <el-tooltip :effect="toolTip" placement="top" content="已设置跳转" v-if="hasJumpIcon">
             <el-icon :size="iconSize" class="inner-icon">
-              <Icon name="icon_viewinchat_outlined" />
+              <Icon name="icon_viewinchat_outlined"
+                ><icon_viewinchat_outlined class="svg-icon"
+              /></Icon>
             </el-icon>
           </el-tooltip>
           <el-tooltip :effect="toolTip" placement="top" content="已设置下钻" v-if="hasDrillIcon">
             <el-icon :size="iconSize" class="inner-icon">
-              <Icon name="icon_drilling_outlined" />
+              <Icon name="icon_drilling_outlined"><icon_drilling_outlined class="svg-icon" /></Icon>
             </el-icon>
           </el-tooltip>
         </div>
       </transition>
     </div>
     <!--这里去渲染不同图库的图表-->
-    <div v-if="chartAreaShow" style="flex: 1; overflow: hidden">
+    <div v-if="chartAreaShow && !showEmpty" style="flex: 1; overflow: hidden">
       <plugin-component
         v-if="view.plugin?.isPlugin"
         :jsname="view.plugin.staticMap['index']"
@@ -912,8 +1038,19 @@ const modalSetting = computed<ModalSetting>(() => {
         @onJumpClick="jumpClick"
         @resetLoading="() => (loading = false)"
       />
+      <de-picture-group
+        v-else-if="showChartView(ChartLibraryType.PICTURE_GROUP)"
+        :themes="canvasStyleData.dashboard.themeColor"
+        ref="chartComponent"
+        :element="element"
+        :active="active"
+        :view="view"
+        :show-position="showPosition"
+      >
+      </de-picture-group>
       <de-rich-text-view
         v-else-if="showChartView(ChartLibraryType.RICH_TEXT)"
+        :scale="scale"
         :themes="canvasStyleData.dashboard.themeColor"
         ref="chartComponent"
         :element="element"
@@ -970,7 +1107,7 @@ const modalSetting = computed<ModalSetting>(() => {
       />
     </div>
     <chart-empty-info
-      v-if="!chartAreaShow"
+      v-if="!chartAreaShow || showEmpty"
       :themes="canvasStyleData.dashboard.themeColor"
       :view-icon="view.type"
     ></chart-empty-info>

@@ -107,7 +107,9 @@ const state = reactive({
   totalItems: 0,
   showPage: false,
   pageStyle: 'simple',
-  currentPageSize: 0
+  currentPageSize: 0,
+  imgEnlarge: false,
+  imgSrc: ''
 })
 // 图表数据不用全响应式
 let chartData = shallowRef<Partial<Chart['data']>>({
@@ -151,7 +153,7 @@ const calcData = (view: Chart, callback, resetPageInfo = true) => {
 }
 // 图表对象不用响应式
 let myChart: SpreadSheet = null
-// 实际渲染的视图信息，适应缩放
+// 实际渲染的图表信息，适应缩放
 let actualChart: ChartObj
 const renderChartFromDialog = (viewInfo: Chart, chartDataInfo) => {
   chartData.value = chartDataInfo
@@ -170,11 +172,11 @@ const renderChart = (viewInfo: Chart, resetPageInfo: boolean) => {
   recursionTransObj(customAttrTrans, actualChart.customAttr, scale.value, terminal.value)
   recursionTransObj(customStyleTrans, actualChart.customStyle, scale.value, terminal.value)
 
-  setupPage(actualChart, resetPageInfo)
-  myChart?.facet.timer?.stop()
-  myChart?.facet.cancelScrollFrame()
+  myChart?.facet?.timer?.stop()
+  myChart?.facet?.cancelScrollFrame()
   myChart?.destroy()
   myChart = null
+  setupPage(actualChart, resetPageInfo)
   const chartView = chartViewManager.getChartView(
     viewInfo.render,
     viewInfo.type
@@ -200,7 +202,7 @@ const setupPage = (chart: ChartObj, resetPageInfo?: boolean) => {
   }
   const pageInfo = state.pageInfo
   pageInfo.pageSize = customAttr.basicStyle.tablePageSize ?? 20
-  if (state.totalItems > state.pageInfo.pageSize || state.pageStyle !== 'general') {
+  if (state.totalItems > state.pageInfo.pageSize || state.pageStyle === 'general') {
     pageInfo.total = state.totalItems
     state.showPage = true
   } else {
@@ -218,7 +220,7 @@ const setupPage = (chart: ChartObj, resetPageInfo?: boolean) => {
 }
 
 const mouseMove = () => {
-  myChart?.facet.timer?.stop()
+  myChart?.facet?.timer?.stop()
 }
 
 const mouseLeave = () => {
@@ -408,6 +410,16 @@ const trackClick = trackAction => {
       if (mobileInPc.value && !inMobile.value) return
       emit('onJumpClick', jumpParam)
       break
+    case 'enlarge':
+      if (view.value.type === 'table-info') {
+        param.data.dimensionList?.forEach(d => {
+          if (d.id === state.curActionId) {
+            state.imgSrc = d.value
+            state.imgEnlarge = true
+          }
+        })
+      }
+      break
     default:
       break
   }
@@ -491,6 +503,14 @@ const trackMenuCalc = itemId => {
   ) {
     trackMenuInfo = ['linkageAndDrill']
   }
+  // 明细表 URL 字段图片放大
+  if (view.value.type === 'table-info') {
+    view.value.xAxis?.forEach(axis => {
+      if (axis.id === itemId && axis.deType === 7) {
+        trackMenuInfo.push('enlarge')
+      }
+    })
+  }
   return trackMenuInfo
 }
 
@@ -567,7 +587,7 @@ onBeforeUnmount(() => {
     myChart = null
     resizeObserver?.disconnect()
   } catch (e) {
-    console.log(e)
+    console.warn(e)
   }
 })
 
@@ -576,7 +596,7 @@ const autoStyle = computed(() => {
     height: 20 * scale.value + 8 + 'px',
     width: 100 / scale.value + '%!important',
     left: 50 * (1 - 1 / scale.value) + '%', // 放大余量 除以 2
-    transform: 'scale(' + scale.value + ')'
+    transform: 'scale(' + scale.value + ') translateZ(0)'
   }
 })
 
@@ -651,6 +671,11 @@ const tablePageClass = computed(() => {
     </el-row>
     <chart-error v-if="isError" :err-msg="errMsg" />
   </div>
+  <el-dialog v-model="state.imgEnlarge" append-to-body class="image-dialog">
+    <div class="enlarge-image">
+      <img :src="state.imgSrc" style="width: 100%; height: 100%; object-fit: contain" />
+    </div>
+  </el-dialog>
 </template>
 
 <style lang="less" scoped>
@@ -681,6 +706,7 @@ const tablePageClass = computed(() => {
   height: 20px;
   display: flex;
   width: 100%;
+  font-size: 14px;
   color: var(--de-pager-color);
   :deep(.table-page-content) {
     button,
@@ -695,5 +721,26 @@ const tablePageClass = computed(() => {
       background: transparent !important;
     }
   }
+}
+</style>
+<style lang="less">
+.image-dialog {
+  height: 100%;
+  .ed-dialog__body {
+    height: calc(100% - 24px);
+    width: 100%;
+  }
+}
+.enlarge-image {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  flex-direction: row;
+  justify-content: center;
+}
+.antv-s2-tooltip-container {
+  max-width: 400px;
+  min-width: 80px;
 }
 </style>
